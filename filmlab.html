@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Film Lab — scouting measurement bench</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --field:#0F1512; --panel:#171F1A; --panel-2:#1D2721; --line:#2A362E;
+    --chalk:#E9E5D8; --chalk-dim:#9BA394; --amber:#F2A93B; --amber-dim:#8a6524;
+    --green:#5FB363; --red:#D95B43; --blue:#5B93D9;
+    --display:'Barlow Condensed',system-ui,sans-serif;
+    --body:'Barlow',system-ui,sans-serif;
+    --mono:'IBM Plex Mono',ui-monospace,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{background:var(--field);color:var(--chalk);font-family:var(--body);font-size:14px;line-height:1.45}
+  button{font-family:var(--body);cursor:pointer}
+  input,select,textarea{font-family:var(--body);background:var(--field);color:var(--chalk);
+    border:1px solid var(--line);border-radius:4px;padding:5px 8px;font-size:13px}
+  input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid var(--amber);outline-offset:1px}
+
+  .app{display:grid;grid-template-columns:minmax(0,1fr) 400px;grid-template-rows:auto 1fr;height:100vh}
+  header{grid-column:1/-1;display:flex;align-items:baseline;gap:14px;padding:10px 18px;
+    border-bottom:1px solid var(--line);background:var(--panel)}
+  header h1{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.06em;text-transform:uppercase}
+  header h1 span{color:var(--amber)}
+  header .sub{color:var(--chalk-dim);font-size:12.5px}
+  header .session{margin-left:auto;display:flex;gap:8px;align-items:center;font-size:12.5px}
+  header .session input{width:150px}
+
+  /* ---------- stage ---------- */
+  .stage{display:flex;flex-direction:column;min-width:0;border-right:1px solid var(--line)}
+  .videoBox{position:relative;flex:1;min-height:0;background:#000;display:flex;align-items:center;justify-content:center}
+  video{max-width:100%;max-height:100%;display:block}
+  #overlay{position:absolute;inset:0;cursor:crosshair}
+  .dropHint{position:absolute;inset:0;display:flex;flex-direction:column;gap:10px;align-items:center;justify-content:center;
+    color:var(--chalk-dim);pointer-events:none;text-align:center;padding:20px}
+  .dropHint b{font-family:var(--display);font-size:26px;letter-spacing:.05em;color:var(--chalk);text-transform:uppercase}
+
+  .transport{display:flex;align-items:center;gap:6px;padding:8px 12px;background:var(--panel);border-top:1px solid var(--line);flex-wrap:wrap}
+  .transport button{background:var(--panel-2);border:1px solid var(--line);color:var(--chalk);
+    border-radius:4px;padding:6px 11px;font-size:13px;font-weight:500}
+  .transport button:hover{border-color:var(--chalk-dim)}
+  .transport .tc{font-family:var(--mono);font-size:14px;color:var(--amber);min-width:118px;text-align:center}
+  .transport label{color:var(--chalk-dim);font-size:12px;display:flex;gap:5px;align-items:center}
+  .transport input[type=number]{width:56px}
+  .transport .file{margin-left:auto}
+
+  /* signature: timing-board readout */
+  .readout{display:flex;gap:0;background:#0A0E0C;border-top:2px solid var(--amber-dim);padding:10px 14px;overflow-x:auto}
+  .cell{padding:2px 22px 2px 0;margin-right:22px;border-right:1px solid var(--line);min-width:118px}
+  .cell:last-child{border-right:none}
+  .cell .k{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--chalk-dim)}
+  .cell .v{font-family:var(--mono);font-size:23px;font-weight:600;color:var(--amber);white-space:nowrap}
+  .cell .u{font-size:12px;color:var(--chalk-dim);margin-left:3px}
+
+  /* ---------- rail ---------- */
+  .rail{display:flex;flex-direction:column;min-height:0;background:var(--panel)}
+  .tabs{display:flex;border-bottom:1px solid var(--line)}
+  .tabs button{flex:1;background:none;border:none;color:var(--chalk-dim);padding:11px 4px;
+    font-family:var(--display);font-size:15px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+    border-bottom:2px solid transparent}
+  .tabs button.on{color:var(--amber);border-bottom-color:var(--amber)}
+  .pane{display:none;flex:1;overflow-y:auto;padding:14px 16px}
+  .pane.on{display:block}
+  .pane h2{font-family:var(--display);font-size:16px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;
+    color:var(--chalk);margin:16px 0 8px;padding-bottom:4px;border-bottom:1px dashed var(--line)}
+  .pane h2:first-child{margin-top:0}
+  .hint{color:var(--chalk-dim);font-size:12.5px;margin-bottom:10px}
+  .row{display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
+  .row label{font-size:12.5px;color:var(--chalk-dim)}
+  .btn{background:var(--panel-2);border:1px solid var(--line);color:var(--chalk);border-radius:4px;padding:7px 12px;font-size:13px;font-weight:500}
+  .btn:hover{border-color:var(--chalk-dim)}
+  .btn.amber{background:var(--amber);border-color:var(--amber);color:#161006;font-weight:600}
+  .btn.amber:hover{filter:brightness(1.08)}
+  .btn.armed{background:var(--red);border-color:var(--red);color:#fff}
+  .btn.sm{padding:3px 8px;font-size:12px}
+  .list{display:flex;flex-direction:column;gap:6px}
+  .card{background:var(--panel-2);border:1px solid var(--line);border-radius:6px;padding:9px 11px;font-size:13px}
+  .card .t{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+  .card .t b{font-size:13.5px}
+  .card .m{font-family:var(--mono);font-size:12.5px;color:var(--amber)}
+  .card .meta{color:var(--chalk-dim);font-size:12px;margin-top:3px}
+  .kbd{font-family:var(--mono);font-size:11px;background:var(--field);border:1px solid var(--line);
+    border-radius:3px;padding:1px 5px;color:var(--chalk)}
+  table.pts{width:100%;border-collapse:collapse;font-size:12.5px;margin-bottom:8px}
+  table.pts td,table.pts th{padding:4px 6px;border-bottom:1px solid var(--line);text-align:left}
+  table.pts th{color:var(--chalk-dim);font-weight:500;font-size:11.5px;text-transform:uppercase;letter-spacing:.08em}
+  .ok{color:var(--green)} .warn{color:var(--amber)} .bad{color:var(--red)}
+
+  /* rubric */
+  .rubric .card{margin-bottom:8px}
+  .grade{display:flex;gap:4px;margin:6px 0}
+  .grade button{width:34px;height:28px;background:var(--field);border:1px solid var(--line);color:var(--chalk-dim);
+    border-radius:4px;font-family:var(--mono);font-size:13px}
+  .grade button.on{background:var(--green);border-color:var(--green);color:#0c1a0e;font-weight:600}
+  .rubric textarea{width:100%;min-height:34px;resize:vertical;font-size:12.5px;margin-top:2px}
+  .counterBig{display:flex;gap:10px}
+  .counterBig .cbox{flex:1;background:var(--panel-2);border:1px solid var(--line);border-radius:6px;padding:10px;text-align:center}
+  .counterBig .cbox .n{font-family:var(--mono);font-size:26px;color:var(--amber);font-weight:600}
+  .counterBig .cbox .l{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--chalk-dim)}
+
+  #reportOut{white-space:pre-wrap;font-family:var(--mono);font-size:12px;background:var(--field);
+    border:1px solid var(--line);border-radius:6px;padding:12px;max-height:380px;overflow:auto}
+  @media (max-width:980px){ .app{grid-template-columns:1fr;grid-template-rows:auto auto 1fr} .stage{border-right:none;border-bottom:1px solid var(--line)} .videoBox{min-height:300px} }
+  @media (prefers-reduced-motion:reduce){ *{transition:none!important;animation:none!important} }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>Film <span>Lab</span></h1>
+    <div class="sub">calibrate the pitch &middot; time the sprints &middot; grade the intangibles</div>
+    <div class="session">
+      <input id="sPlayer" placeholder="Player" aria-label="Player name">
+      <input id="sMatch" placeholder="Match / opponent" aria-label="Match">
+      <input id="sComp" placeholder="Competition" aria-label="Competition" style="width:120px">
+    </div>
+  </header>
+
+  <!-- ================= STAGE ================= -->
+  <div class="stage">
+    <div class="videoBox" id="videoBox">
+      <video id="vid" playsinline></video>
+      <canvas id="overlay"></canvas>
+      <div class="dropHint" id="dropHint">
+        <b>Load match footage</b>
+        <div>Use “Open video” below, or drop a file anywhere on this page.<br>
+        Any local .mp4 / .webm works — full match, half, or a clipped sequence.</div>
+      </div>
+    </div>
+    <div class="transport">
+      <button id="tPlay" title="Play/Pause (Space)">&#9654;</button>
+      <button id="tB5" title="Back 5 frames (&larr;)">&#8676;5</button>
+      <button id="tB1" title="Back 1 frame ( , )">&#8249;1</button>
+      <span class="tc" id="tc">00:00.00</span>
+      <button id="tF1" title="Forward 1 frame ( . )">1&#8250;</button>
+      <button id="tF5" title="Forward 5 frames (&rarr;)">5&#8677;</button>
+      <label>speed <select id="tRate">
+        <option>0.25</option><option>0.5</option><option selected>1</option><option>1.5</option><option>2</option>
+      </select></label>
+      <label>fps <input type="number" id="tFps" value="25" min="10" max="60" step="1" title="Frame rate of the footage"></label>
+      <label class="file"><input type="file" id="fileIn" accept="video/*" hidden>
+        <button class="btn" onclick="document.getElementById('fileIn').click()">Open video</button></label>
+    </div>
+    <div class="readout" aria-label="Live measurement readout">
+      <div class="cell"><div class="k">Mode</div><div class="v" id="roMode" style="font-size:16px;line-height:29px">IDLE</div></div>
+      <div class="cell"><div class="k">Points</div><div class="v" id="roPts">0</div></div>
+      <div class="cell"><div class="k">Distance</div><div class="v" id="roDist">0.0<span class="u">m</span></div></div>
+      <div class="cell"><div class="k">Top speed</div><div class="v" id="roVmax">—<span class="u">m/s</span></div></div>
+      <div class="cell"><div class="k">Top speed</div><div class="v" id="roKmh">—<span class="u">km/h</span></div></div>
+      <div class="cell"><div class="k">0–10 m</div><div class="v" id="roT10">—<span class="u">s</span></div></div>
+      <div class="cell"><div class="k">Peak accel</div><div class="v" id="roAcc">—<span class="u">m/s²</span></div></div>
+    </div>
+  </div>
+
+  <!-- ================= RAIL ================= -->
+  <div class="rail">
+    <div class="tabs" role="tablist">
+      <button class="on" data-pane="pCal" role="tab">Calibrate</button>
+      <button data-pane="pSprint" role="tab">Sprint</button>
+      <button data-pane="pScore" role="tab">Scorecard</button>
+      <button data-pane="pReport" role="tab">Report</button>
+    </div>
+
+    <!-- CALIBRATE -->
+    <div class="pane on" id="pCal">
+      <div class="hint">Pause on a frame with clear pitch markings. Add 4+ landmarks:
+        pick a preset, press <b>Place</b>, then click that exact spot in the video.
+        More points and wider spread = better accuracy. Recalibrate when the camera cuts to a new angle.</div>
+      <div class="row">
+        <label>pitch length (m)</label><input type="number" id="pitchL" value="105" min="90" max="120" step="0.5" style="width:64px">
+        <label>width (m)</label><input type="number" id="pitchW" value="68" min="45" max="90" step="0.5" style="width:64px">
+        <span class="hint" style="margin:0" id="dimNote"></span>
+      </div>
+      <div class="row">
+        <select id="lmPreset" style="flex:1"></select>
+        <button class="btn" id="lmPlace">Place</button>
+      </div>
+      <div class="row">
+        <label>custom X (m)</label><input type="number" id="lmX" style="width:64px" step="0.1">
+        <label>Y (m)</label><input type="number" id="lmY" style="width:64px" step="0.1">
+        <button class="btn sm" id="lmPlaceCustom">Place custom</button>
+      </div>
+      <table class="pts" id="lmTable"><thead><tr><th>Landmark</th><th>Pitch (m)</th><th>Pixel</th><th></th></tr></thead><tbody></tbody></table>
+      <div class="row">
+        <button class="btn amber" id="lmCompute">Compute calibration</button>
+        <button class="btn" id="lmGrid">Grid overlay: off</button>
+        <button class="btn sm" id="lmClear">Clear</button>
+      </div>
+      <div id="calStatus" class="hint">No calibration yet.</div>
+      <h2>Pitch reference</h2>
+      <div class="hint">Origin = left corner flag on the near touchline; X runs goal-to-goal, Y across the pitch.
+        Box geometry (penalty areas, six-yard boxes, penalty spots, centre circle) is <b>fixed by the Laws of the Game</b>,
+        so those presets are exact on any pitch. Only corner flags and halfway-line points depend on the
+        length/width above — set them (club sites, league handbooks, or measure the pitch on Google Earth)
+        before using those presets. Unsure of the dimensions? Calibrate from box geometry only and everything stays accurate.</div>
+    </div>
+
+    <!-- SPRINT -->
+    <div class="pane" id="pSprint">
+      <div class="hint">Calibrate first. Press <b>Start run</b>, then step through frames
+        (<span class="kbd">,</span> / <span class="kbd">.</span> or <span class="kbd">&larr;</span> / <span class="kbd">&rarr;</span>)
+        and click the player's <b>feet</b> every few frames. The readout updates live. Press <b>Finish</b> to save.</div>
+      <div class="row">
+        <input id="runLabel" placeholder="Run label (e.g. 34' recovery sprint)" style="flex:1">
+      </div>
+      <div class="row">
+        <button class="btn amber" id="runStart">Start run</button>
+        <button class="btn" id="runUndo">Undo point</button>
+        <button class="btn" id="runFinish">Finish &amp; save</button>
+        <button class="btn sm" id="runCancel">Cancel</button>
+      </div>
+      <h2>Saved runs</h2>
+      <div class="list" id="runList"></div>
+    </div>
+
+    <!-- SCORECARD -->
+    <div class="pane" id="pScore">
+      <h2>Live counters</h2>
+      <div class="hint">While watching: <span class="kbd">S</span> = scan (head check),
+        <span class="kbd">R</span> = reception, <span class="kbd">L</span> = ball lost (starts stopwatch),
+        <span class="kbd">P</span> = press/recover action (stops it and logs the reaction time).</div>
+      <div class="counterBig">
+        <div class="cbox"><div class="n" id="cScan">0</div><div class="l">Scans</div></div>
+        <div class="cbox"><div class="n" id="cRec">0</div><div class="l">Receptions</div></div>
+        <div class="cbox"><div class="n" id="cRatio">—</div><div class="l">Scans / rec</div></div>
+        <div class="cbox"><div class="n" id="cLoss">—</div><div class="l">React-to-loss s (avg)</div></div>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <button class="btn sm" id="cUndoScan">Undo scan</button>
+        <button class="btn sm" id="cUndoRec">Undo reception</button>
+        <span id="lossState" class="hint" style="margin:0"></span>
+      </div>
+      <h2>First touch log</h2>
+      <div class="hint">Grade every reception as it happens:
+        <span class="kbd">1</span> clean · <span class="kbd">2</span> heavy (needed a second touch) ·
+        <span class="kbd">3</span> lost (miscontrol/dispossessed). Hold <span class="kbd">Shift</span>
+        for touches <b>under pressure</b>. Rates compute live.</div>
+      <div class="counterBig">
+        <div class="cbox"><div class="n" id="tqClean">0</div><div class="l">Clean</div></div>
+        <div class="cbox"><div class="n" id="tqHeavy">0</div><div class="l">Heavy</div></div>
+        <div class="cbox"><div class="n" id="tqLost">0</div><div class="l">Lost</div></div>
+        <div class="cbox"><div class="n" id="tqRate">—</div><div class="l">Clean %</div></div>
+      </div>
+      <div class="counterBig" style="margin-top:8px">
+        <div class="cbox"><div class="n" id="tqCleanP">0</div><div class="l">Clean (press.)</div></div>
+        <div class="cbox"><div class="n" id="tqHeavyP">0</div><div class="l">Heavy (press.)</div></div>
+        <div class="cbox"><div class="n" id="tqLostP">0</div><div class="l">Lost (press.)</div></div>
+        <div class="cbox"><div class="n" id="tqRateP">—</div><div class="l">Clean % press.</div></div>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <button class="btn sm" id="tqUndo">Undo last touch</button>
+        <span class="hint" style="margin:0" id="tqTotal"></span>
+      </div>
+      <h2>Rubric <span style="font-weight:400;color:var(--chalk-dim);font-size:12px;text-transform:none;letter-spacing:0">— grade 1–5, attach clip timestamps as evidence</span></h2>
+      <div class="rubric" id="rubric"></div>
+      <h2>Clips</h2>
+      <div class="list" id="clipList"></div>
+    </div>
+
+    <!-- REPORT -->
+    <div class="pane" id="pReport">
+      <div class="row">
+        <button class="btn amber" id="repBuild">Build report</button>
+        <button class="btn" id="repMd">Download .md</button>
+        <button class="btn" id="repJson">Export session .json</button>
+        <label class="btn" style="display:inline-block">Import .json<input type="file" id="repImport" accept=".json" hidden></label>
+      </div>
+      <div id="reportOut">Build the report to preview it here.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ======================= measurement core (validated) ======================= */
+function solveLinear(A,b){const n=A.length;const M=A.map((row,i)=>[...row,b[i]]);
+for(let col=0;col<n;col++){let piv=col;for(let r=col+1;r<n;r++)if(Math.abs(M[r][col])>Math.abs(M[piv][col]))piv=r;
+if(Math.abs(M[piv][col])<1e-12)return null;[M[col],M[piv]]=[M[piv],M[col]];
+for(let r=0;r<n;r++){if(r===col)continue;const f=M[r][col]/M[col][col];for(let c=col;c<=n;c++)M[r][c]-=f*M[col][c];}}
+return M.map((row,i)=>row[n]/row[i]);}
+function avg(a){return a.reduce((s,v)=>s+v,0)/a.length}
+function matMul3(A,B){const C=[[0,0,0],[0,0,0],[0,0,0]];for(let i=0;i<3;i++)for(let j=0;j<3;j++)for(let k=0;k<3;k++)C[i][j]+=A[i][k]*B[k][j];return C}
+function computeHomography(pairs){if(pairs.length<4)return null;
+const mu=avg(pairs.map(p=>p.u)),mv=avg(pairs.map(p=>p.v));
+const su=Math.max(1e-6,avg(pairs.map(p=>Math.abs(p.u-mu)))),sv=Math.max(1e-6,avg(pairs.map(p=>Math.abs(p.v-mv))));
+const rows=[],rhs=[];for(const p0 of pairs){const p={u:(p0.u-mu)/su,v:(p0.v-mv)/sv,x:p0.x,y:p0.y};
+rows.push([p.u,p.v,1,0,0,0,-p.u*p.x,-p.v*p.x]);rhs.push(p.x);
+rows.push([0,0,0,p.u,p.v,1,-p.u*p.y,-p.v*p.y]);rhs.push(p.y);}
+const AtA=Array.from({length:8},()=>new Array(8).fill(0)),Atb=new Array(8).fill(0);
+for(let r=0;r<rows.length;r++){for(let i=0;i<8;i++){Atb[i]+=rows[r][i]*rhs[r];for(let j=0;j<8;j++)AtA[i][j]+=rows[r][i]*rows[r][j];}}
+const h=solveLinear(AtA,Atb);if(!h)return null;
+const Hn=[[h[0],h[1],h[2]],[h[3],h[4],h[5]],[h[6],h[7],1]];
+const N=[[1/su,0,-mu/su],[0,1/sv,-mv/sv],[0,0,1]];
+const H=matMul3(Hn,N);
+let s=0;for(const p of pairs){const q=applyH(H,p.u,p.v);s+=(q.x-p.x)**2+(q.y-p.y)**2;}
+return{H,rms:Math.sqrt(s/pairs.length)};}
+function applyH(H,u,v){const w=H[2][0]*u+H[2][1]*v+H[2][2];
+return{x:(H[0][0]*u+H[0][1]*v+H[0][2])/w,y:(H[1][0]*u+H[1][1]*v+H[1][2])/w};}
+function invertH(H){const[a,b,c]=H[0],[d,e,f]=H[1],[g,h,i]=H[2];
+const A=e*i-f*h,B=c*h-b*i,C=b*f-c*e,D=f*g-d*i,E=a*i-c*g,F=c*d-a*f,G=d*h-e*g,Hh=b*g-a*h,I=a*e-b*d;
+const det=a*A+b*D+c*G;if(Math.abs(det)<1e-12)return null;
+return[[A/det,B/det,C/det],[D/det,E/det,F/det],[G/det,Hh/det,I/det]];}
+function analyzeRun(points,opts={}){const halfWin=opts.halfWin??0.45,gMin=opts.accelGapMin??0.5,gMax=opts.accelGapMax??1.5;
+if(points.length<2)return null;const pts=[...points].sort((a,b)=>a.t-b.t);
+let total=0;const cum=[0];
+for(let i=1;i<pts.length;i++){total+=Math.hypot(pts[i].x-pts[i-1].x,pts[i].y-pts[i-1].y);cum.push(total);}
+const vel=pts.map((p,i)=>{const idx=[];for(let j=0;j<pts.length;j++)if(Math.abs(pts[j].t-p.t)<=halfWin)idx.push(j);
+if(idx.length<2)return null;const mt=avg(idx.map(j=>pts[j].t)),md=avg(idx.map(j=>cum[j]));
+let num=0,den=0;for(const j of idx){num+=(pts[j].t-mt)*(cum[j]-md);den+=(pts[j].t-mt)**2;}
+return den>1e-9?num/den:null;});
+let vmax=0,vmaxAt=null;vel.forEach((v,i)=>{if(v!==null&&v>vmax){vmax=v;vmaxAt=pts[i].t;}});
+let amax=0;for(let i=0;i<pts.length;i++){if(vel[i]===null)continue;
+for(let j=i+1;j<pts.length;j++){if(vel[j]===null)continue;const dt=pts[j].t-pts[i].t;
+if(dt<gMin||dt>gMax)continue;amax=Math.max(amax,(vel[j]-vel[i])/dt);}}
+let t10=null;for(let i=1;i<cum.length;i++){if(cum[i]>=10){const f=(10-cum[i-1])/(cum[i]-cum[i-1]);
+t10=(pts[i-1].t+f*(pts[i].t-pts[i-1].t))-pts[0].t;break;}}
+return{duration:pts[pts.length-1].t-pts[0].t,distance:total,
+avgSpeed:total/(pts[pts.length-1].t-pts[0].t),maxSpeed:vmax,maxSpeedAt:vmaxAt,
+time_0_10m:t10,peakAccel:amax};}
+
+/* ======================= app state ======================= */
+const $=id=>document.getElementById(id);
+const vid=$('vid'),ov=$('overlay'),ctx=ov.getContext('2d');
+const state={
+  cal:null,           // {H, rms}
+  landmarks:[],       // {name,x,y,u,v}
+  placing:null,       // pending landmark {name,x,y}
+  gridOn:false,
+  run:null,           // {label, points:[{t,x,y,u,v}]}
+  runs:[],
+  scans:0,recs:0,lossTimes:[],lossStart:null,
+  touch:{clean:0,heavy:0,lost:0,cleanP:0,heavyP:0,lostP:0},touchHist:[],
+  rubric:{},clips:[],
+};
+
+/* ---------- landmark presets (recomputed from pitch dimensions) ---------- */
+// Box geometry is fixed by the Laws of the Game; only L/W-dependent points move.
+const pitchL=()=>Math.max(1,+$('pitchL').value||105);
+const pitchW=()=>Math.max(1,+$('pitchW').value||68);
+let PRESETS=[];
+function buildPresets(){
+  const L=pitchL(),W=pitchW();
+  const pyN=(W-40.32)/2, pyF=(W+40.32)/2;   // penalty area width: fixed 40.32
+  const syN=(W-18.32)/2, syF=(W+18.32)/2;   // six-yard width: fixed 18.32
+  const r2=n=>Math.round(n*100)/100;
+  PRESETS=[
+   ["Penalty area L — near/goal-line",0,r2(pyN)],["Penalty area L — near/box-edge",16.5,r2(pyN)],
+   ["Penalty area L — far/box-edge",16.5,r2(pyF)],["Penalty area L — far/goal-line",0,r2(pyF)],
+   ["Penalty area R — near/goal-line",L,r2(pyN)],["Penalty area R — near/box-edge",r2(L-16.5),r2(pyN)],
+   ["Penalty area R — far/box-edge",r2(L-16.5),r2(pyF)],["Penalty area R — far/goal-line",L,r2(pyF)],
+   ["Six-yard L — near/goal-line",0,r2(syN)],["Six-yard L — near/box-edge",5.5,r2(syN)],
+   ["Six-yard L — far/box-edge",5.5,r2(syF)],["Six-yard L — far/goal-line",0,r2(syF)],
+   ["Six-yard R — near/goal-line",L,r2(syN)],["Six-yard R — near/box-edge",r2(L-5.5),r2(syN)],
+   ["Six-yard R — far/box-edge",r2(L-5.5),r2(syF)],["Six-yard R — far/goal-line",L,r2(syF)],
+   ["Penalty spot — left",11,r2(W/2)],["Penalty spot — right",r2(L-11),r2(W/2)],
+   ["Centre spot",r2(L/2),r2(W/2)],
+   ["Centre circle — near edge on halfway",r2(L/2),r2(W/2-9.15)],
+   ["Centre circle — far edge on halfway",r2(L/2),r2(W/2+9.15)],
+   ["Halfway — near touchline",r2(L/2),0],["Halfway — far touchline",r2(L/2),W],
+   ["Corner flag — left/near",0,0],["Corner flag — left/far",0,W],
+   ["Corner flag — right/near",L,0],["Corner flag — right/far",L,W],
+  ];
+  const sel=$('lmPreset'),prev=sel.value;sel.innerHTML='';
+  PRESETS.forEach((p,i)=>{const o=document.createElement('option');o.value=i;o.textContent=p[0];sel.appendChild(o);});
+  if(prev&&prev<PRESETS.length)sel.value=prev;
+  $('dimNote').textContent=(L===105&&W===68)?'UEFA standard':`custom ${L} × ${W}`;
+}
+function onDimsChange(){
+  if(state.landmarks.length&&
+     !confirm('Pitch dimensions changed. Clear placed landmarks and recalibrate with the new coordinates?')){
+    return; // keep old landmarks; presets still rebuild below
+  } else if(state.landmarks.length){
+    state.landmarks=[];state.cal=null;renderLandmarks();calStatus();draw();
+  }
+  buildPresets();draw();
+}
+$('pitchL').addEventListener('change',onDimsChange);
+$('pitchW').addEventListener('change',onDimsChange);
+buildPresets();
+
+/* ---------- video load / transport ---------- */
+function loadFile(f){if(!f)return;vid.src=URL.createObjectURL(f);$('dropHint').style.display='none';
+vid.addEventListener('loadedmetadata',syncCanvas,{once:true});}
+$('fileIn').addEventListener('change',e=>loadFile(e.target.files[0]));
+document.addEventListener('dragover',e=>e.preventDefault());
+document.addEventListener('drop',e=>{e.preventDefault();if(e.dataTransfer.files[0])loadFile(e.dataTransfer.files[0]);});
+
+const fps=()=>Math.max(1,+$('tFps').value||25);
+$('tPlay').onclick=()=>vid.paused?vid.play():vid.pause();
+$('tB1').onclick=()=>step(-1);$('tF1').onclick=()=>step(1);
+$('tB5').onclick=()=>step(-5);$('tF5').onclick=()=>step(5);
+$('tRate').onchange=e=>vid.playbackRate=+e.target.value;
+function step(n){vid.pause();vid.currentTime=Math.max(0,vid.currentTime+n/fps());}
+vid.addEventListener('timeupdate',()=>{ $('tc').textContent=fmtT(vid.currentTime); });
+vid.addEventListener('play',()=>$('tPlay').innerHTML='&#10073;&#10073;');
+vid.addEventListener('pause',()=>$('tPlay').innerHTML='&#9654;');
+vid.addEventListener('seeked',draw);
+function fmtT(s){const m=Math.floor(s/60),ss=(s%60).toFixed(2).padStart(5,'0');return String(m).padStart(2,'0')+':'+ss;}
+
+/* ---------- canvas geometry ---------- */
+function videoRect(){ // displayed content rect of the video inside its box (letterbox aware)
+  const box=$('videoBox').getBoundingClientRect();
+  if(!vid.videoWidth)return{l:0,t:0,w:box.width,h:box.height,sx:1,sy:1};
+  const s=Math.min(box.width/vid.videoWidth,box.height/vid.videoHeight);
+  const w=vid.videoWidth*s,h=vid.videoHeight*s;
+  return{l:(box.width-w)/2,t:(box.height-h)/2,w,h,sx:vid.videoWidth/w,sy:vid.videoHeight/h};
+}
+function syncCanvas(){const box=$('videoBox').getBoundingClientRect();
+ov.width=box.width*devicePixelRatio;ov.height=box.height*devicePixelRatio;
+ov.style.width=box.width+'px';ov.style.height=box.height+'px';
+ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);draw();}
+new ResizeObserver(syncCanvas).observe($('videoBox'));
+function evToPixel(e){const r=ov.getBoundingClientRect(),vr=videoRect();
+const cx=e.clientX-r.left,cy=e.clientY-r.top;
+return{u:(cx-vr.l)*vr.sx,v:(cy-vr.t)*vr.sy,inVideo:cx>=vr.l&&cx<=vr.l+vr.w&&cy>=vr.t&&cy<=vr.t+vr.h};}
+function pixelToCanvas(u,v){const vr=videoRect();return{x:vr.l+u/vr.sx,y:vr.t+v/vr.sy};}
+
+/* ---------- click handling ---------- */
+ov.addEventListener('click',e=>{
+  const p=evToPixel(e);if(!p.inVideo||!vid.videoWidth)return;
+  if(state.placing){ // landmark placement
+    state.landmarks.push({...state.placing,u:p.u,v:p.v});
+    state.placing=null;setMode('IDLE');renderLandmarks();draw();return;
+  }
+  if(state.run){ // sprint tracking point
+    if(!state.cal){alert('Calibrate first (4+ landmarks).');return;}
+    const m=applyH(state.cal.H,p.u,p.v);
+    state.run.points.push({t:vid.currentTime,x:m.x,y:m.y,u:p.u,v:p.v});
+    liveRun();draw();
+  }
+});
+
+/* ---------- calibration ---------- */
+$('lmPlace').onclick=()=>{const P=PRESETS[+$('lmPreset').value];
+state.placing={name:P[0],x:P[1],y:P[2]};setMode('PLACE');};
+$('lmPlaceCustom').onclick=()=>{const x=+$('lmX').value,y=+$('lmY').value;
+if(isNaN(x)||isNaN(y))return alert('Enter custom X and Y in metres.');
+state.placing={name:`Custom (${x}, ${y})`,x,y};setMode('PLACE');};
+$('lmClear').onclick=()=>{state.landmarks=[];state.cal=null;renderLandmarks();calStatus();draw();};
+$('lmCompute').onclick=()=>{
+  const c=computeHomography(state.landmarks);
+  if(!c){calStatus('Need 4+ well-spread landmarks (not all on one line).','bad');return;}
+  state.cal=c;calStatus();draw();};
+$('lmGrid').onclick=e=>{state.gridOn=!state.gridOn;
+e.target.textContent='Grid overlay: '+(state.gridOn?'on':'off');draw();};
+function calStatus(msg,cls){const el=$('calStatus');
+if(msg){el.innerHTML=`<span class="${cls}">${msg}</span>`;return;}
+if(!state.cal){el.textContent='No calibration yet.';return;}
+const r=state.cal.rms;
+const grade=r<0.5?['ok','excellent']:r<1.5?['warn','usable — add more points if possible']:['bad','poor — re-place points'];
+el.innerHTML=`Calibrated from ${state.landmarks.length} points &middot; RMS error
+<b class="${grade[0]}">${r.toFixed(2)} m</b> (${grade[1]}). Toggle the grid overlay to verify lines sit on the pitch markings.`;}
+function renderLandmarks(){const tb=$('lmTable').querySelector('tbody');tb.innerHTML='';
+state.landmarks.forEach((L,i)=>{const tr=document.createElement('tr');
+tr.innerHTML=`<td>${L.name}</td><td>${L.x}, ${L.y}</td><td>${L.u.toFixed(0)}, ${L.v.toFixed(0)}</td>
+<td><button class="btn sm" data-i="${i}">&times;</button></td>`;
+tr.querySelector('button').onclick=()=>{state.landmarks.splice(i,1);state.cal=null;renderLandmarks();calStatus();draw();};
+tb.appendChild(tr);});}
+
+/* ---------- sprint runs ---------- */
+$('runStart').onclick=()=>{if(!state.cal)return alert('Calibrate first.');
+state.run={label:$('runLabel').value||('Run '+(state.runs.length+1)),points:[]};
+setMode('TRACK');liveRun();};
+$('runUndo').onclick=()=>{if(state.run){state.run.points.pop();liveRun();draw();}};
+$('runCancel').onclick=()=>{state.run=null;setMode('IDLE');liveRun();draw();};
+$('runFinish').onclick=()=>{
+  if(!state.run)return;
+  if(state.run.points.length<3){alert('Plot at least 3 points.');return;}
+  const a=analyzeRun(state.run.points);
+  state.runs.push({label:state.run.label,points:state.run.points,analysis:a});
+  state.run=null;setMode('IDLE');renderRuns();liveRun();draw();$('runLabel').value='';};
+function liveRun(){
+  const pts=state.run?state.run.points:[];
+  $('roPts').textContent=pts.length;
+  const a=pts.length>=2?analyzeRun(pts):null;
+  $('roDist').innerHTML=(a?a.distance.toFixed(1):'0.0')+'<span class="u">m</span>';
+  $('roVmax').innerHTML=(a&&a.maxSpeed?a.maxSpeed.toFixed(2):'—')+'<span class="u">m/s</span>';
+  $('roKmh').innerHTML=(a&&a.maxSpeed?(a.maxSpeed*3.6).toFixed(1):'—')+'<span class="u">km/h</span>';
+  $('roT10').innerHTML=(a&&a.time_0_10m?a.time_0_10m.toFixed(2):'—')+'<span class="u">s</span>';
+  $('roAcc').innerHTML=(a&&a.peakAccel?a.peakAccel.toFixed(2):'—')+'<span class="u">m/s²</span>';
+}
+function renderRuns(){const el=$('runList');el.innerHTML='';
+state.runs.forEach((r,i)=>{const a=r.analysis,d=document.createElement('div');d.className='card';
+d.innerHTML=`<div class="t"><b>${r.label}</b>
+<span class="m">${a.maxSpeed.toFixed(2)} m/s · ${(a.maxSpeed*3.6).toFixed(1)} km/h</span></div>
+<div class="meta">${a.distance.toFixed(1)} m in ${a.duration.toFixed(1)} s &middot;
+0–10 m: ${a.time_0_10m?a.time_0_10m.toFixed(2)+' s':'n/a'} &middot;
+peak accel ${a.peakAccel.toFixed(2)} m/s² &middot; ${r.points.length} pts
+<button class="btn sm" style="float:right">delete</button></div>`;
+d.querySelector('button').onclick=()=>{state.runs.splice(i,1);renderRuns();};
+el.appendChild(d);});}
+
+/* ---------- scorecard ---------- */
+const RUBRIC=[
+ ["Scanning","Head checks before receiving; awareness of space and pressure"],
+ ["First touch under pressure","Touch direction and security when pressed"],
+ ["Decision speed","Time from receipt to productive action"],
+ ["Reaction to loss","Counterpress intensity within 3 s of losing the ball"],
+ ["Off-ball discipline","Holds structure vs. ball-chasing; positioning between phases"],
+ ["1v1 defending","Body shape, delay, timing of engagement in space"],
+ ["Aerial timing","Takeoff timing and body use, attacking and defending headers"],
+ ["Adversity response","Behaviour after errors, when losing, when targeted physically"],
+];
+RUBRIC.forEach(([name,desc])=>{state.rubric[name]={grade:null,note:''};
+const d=document.createElement('div');d.className='card';
+d.innerHTML=`<div class="t"><b>${name}</b><button class="btn sm">&#128206; clip</button></div>
+<div class="meta">${desc}</div><div class="grade"></div><textarea placeholder="Evidence note…"></textarea>`;
+const g=d.querySelector('.grade');
+for(let n=1;n<=5;n++){const b=document.createElement('button');b.textContent=n;
+b.onclick=()=>{state.rubric[name].grade=n;[...g.children].forEach((c,j)=>c.classList.toggle('on',j<n));};
+g.appendChild(b);}
+d.querySelector('textarea').oninput=e=>state.rubric[name].note=e.target.value;
+d.querySelector('.btn').onclick=()=>addClip(name);
+$('rubric').appendChild(d);});
+function addClip(tag){state.clips.push({t:vid.currentTime,tag,note:''});renderClips();}
+function renderClips(){const el=$('clipList');el.innerHTML='';
+state.clips.forEach((c,i)=>{const d=document.createElement('div');d.className='card';
+d.innerHTML=`<div class="t"><b class="m" style="cursor:pointer" title="Jump to">${fmtT(c.t)}</b>
+<span>${c.tag}</span><button class="btn sm">&times;</button></div>`;
+d.querySelector('.m').onclick=()=>{vid.currentTime=c.t;};
+d.querySelector('button').onclick=()=>{state.clips.splice(i,1);renderClips();};
+el.appendChild(d);});}
+function bumpCounters(){
+  $('cScan').textContent=state.scans;$('cRec').textContent=state.recs;
+  $('cRatio').textContent=state.recs?(state.scans/state.recs).toFixed(2):'—';
+  $('cLoss').textContent=state.lossTimes.length?avg(state.lossTimes).toFixed(2):'—';
+  $('lossState').textContent=state.lossStart!==null?
+    ('stopwatch running since '+fmtT(state.lossStart)+' — press P on the press/recover action'):'';}
+$('cUndoScan').onclick=()=>{state.scans=Math.max(0,state.scans-1);bumpCounters();};
+$('cUndoRec').onclick=()=>{state.recs=Math.max(0,state.recs-1);bumpCounters();};
+
+function touchRates(t){
+  const open=t.clean+t.heavy+t.lost, prs=t.cleanP+t.heavyP+t.lostP;
+  return{open,prs,total:open+prs,
+    rate:open+prs?(t.clean+t.cleanP)/(open+prs):null,
+    rateP:prs?t.cleanP/prs:null};
+}
+function bumpTouch(){
+  const t=state.touch,r=touchRates(t);
+  $('tqClean').textContent=t.clean;$('tqHeavy').textContent=t.heavy;$('tqLost').textContent=t.lost;
+  $('tqCleanP').textContent=t.cleanP;$('tqHeavyP').textContent=t.heavyP;$('tqLostP').textContent=t.lostP;
+  $('tqRate').textContent=r.rate!=null?Math.round(r.rate*100)+'%':'—';
+  $('tqRateP').textContent=r.rateP!=null?Math.round(r.rateP*100)+'%':'—';
+  $('tqTotal').textContent=r.total?r.total+' touches graded ('+r.prs+' under pressure)':'';
+}
+$('tqUndo').onclick=()=>{const k=state.touchHist.pop();
+  if(k){state.touch[k]=Math.max(0,state.touch[k]-1);bumpTouch();}};
+
+/* ---------- keyboard ---------- */
+document.addEventListener('keydown',e=>{
+  if(/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName))return;
+  const k=e.key.toLowerCase();
+  if(e.code==='Space'){e.preventDefault();$('tPlay').click();}
+  else if(k===','){step(-1)} else if(k==='.'){step(1)}
+  else if(k==='arrowleft'){e.preventDefault();step(-5)} else if(k==='arrowright'){e.preventDefault();step(5)}
+  else if(k==='s'){state.scans++;bumpCounters();}
+  else if(k==='r'){state.recs++;bumpCounters();}
+  else if(k==='l'){state.lossStart=vid.currentTime;bumpCounters();}
+  else if(k==='p'){if(state.lossStart!==null){const dt=vid.currentTime-state.lossStart;
+    if(dt>0&&dt<20)state.lossTimes.push(dt);state.lossStart=null;bumpCounters();}}
+  else if(e.code==='Digit1'||e.code==='Digit2'||e.code==='Digit3'){
+    const kind=['clean','heavy','lost'][+e.code.slice(-1)-1]+(e.shiftKey?'P':'');
+    state.touch[kind]++;state.touchHist.push(kind);bumpTouch();}
+});
+
+/* ---------- overlay drawing ---------- */
+function draw(){
+  ctx.clearRect(0,0,ov.width,ov.height);
+  if(!vid.videoWidth)return;
+  // pitch grid verification
+  if(state.gridOn&&state.cal){
+    const inv=invertH(state.cal.H);if(inv){
+      const L=pitchL(),W=pitchW();
+      const pyN=(W-40.32)/2,pyF=(W+40.32)/2;
+      ctx.strokeStyle='rgba(233,229,216,.75)';ctx.lineWidth=1.2;
+      const seg=(x1,y1,x2,y2)=>{ctx.beginPath();let first=true;
+        for(let s=0;s<=24;s++){const x=x1+(x2-x1)*s/24,y=y1+(y2-y1)*s/24;
+        const p=applyH(inv,x,y),c=pixelToCanvas(p.x,p.y);
+        first?ctx.moveTo(c.x,c.y):ctx.lineTo(c.x,c.y);first=false;}ctx.stroke();};
+      seg(0,0,L,0);seg(L,0,L,W);seg(L,W,0,W);seg(0,W,0,0);seg(L/2,0,L/2,W);
+      seg(0,pyN,16.5,pyN);seg(16.5,pyN,16.5,pyF);seg(16.5,pyF,0,pyF);
+      seg(L,pyN,L-16.5,pyN);seg(L-16.5,pyN,L-16.5,pyF);seg(L-16.5,pyF,L,pyF);
+      ctx.beginPath();let f2=true; // centre circle
+      for(let a=0;a<=48;a++){const th=a/48*2*Math.PI;
+        const p=applyH(inv,L/2+9.15*Math.cos(th),W/2+9.15*Math.sin(th)),c=pixelToCanvas(p.x,p.y);
+        f2?ctx.moveTo(c.x,c.y):ctx.lineTo(c.x,c.y);f2=false;}ctx.stroke();
+    }
+  }
+  // landmarks
+  for(const L of state.landmarks){const c=pixelToCanvas(L.u,L.v);
+    ctx.strokeStyle='#5B93D9';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(c.x-7,c.y);ctx.lineTo(c.x+7,c.y);ctx.moveTo(c.x,c.y-7);ctx.lineTo(c.x,c.y+7);ctx.stroke();}
+  // active run trail
+  const pts=state.run?state.run.points:[];
+  if(pts.length){ctx.strokeStyle='#F2A93B';ctx.fillStyle='#F2A93B';ctx.lineWidth=2;
+    ctx.beginPath();pts.forEach((p,i)=>{const c=pixelToCanvas(p.u,p.v);
+      i?ctx.lineTo(c.x,c.y):ctx.moveTo(c.x,c.y);});ctx.stroke();
+    pts.forEach(p=>{const c=pixelToCanvas(p.u,p.v);
+      ctx.beginPath();ctx.arc(c.x,c.y,3.4,0,7);ctx.fill();});}
+}
+function setMode(m){$('roMode').textContent=m;
+$('runStart').classList.toggle('armed',m==='TRACK');
+$('lmPlace').classList.toggle('armed',m==='PLACE');}
+
+/* ---------- tabs ---------- */
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.tabs button').forEach(x=>x.classList.remove('on'));
+  document.querySelectorAll('.pane').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');$(b.dataset.pane).classList.add('on');});
+
+/* ---------- report ---------- */
+function buildSession(){return{
+  meta:{player:$('sPlayer').value,match:$('sMatch').value,competition:$('sComp').value,
+        pitch:{length:pitchL(),width:pitchW()},
+        exported:new Date().toISOString(),tool:'Film Lab v1.1'},
+  calibration:state.cal?{rms:state.cal.rms,landmarks:state.landmarks}:null,
+  runs:state.runs.map(r=>({label:r.label,analysis:r.analysis,points:r.points})),
+  counters:{scans:state.scans,receptions:state.recs,
+            scansPerReception:state.recs?state.scans/state.recs:null,
+            reactionToLoss:state.lossTimes},
+  touch:{...state.touch,...touchRates(state.touch)},
+  rubric:state.rubric,clips:state.clips};}
+function buildMarkdown(){const s=buildSession();const L=[];
+L.push(`# Film report — ${s.meta.player||'Unnamed player'}`);
+L.push(`**Match:** ${s.meta.match||'—'}  |  **Competition:** ${s.meta.competition||'—'}  |  **Date:** ${new Date().toLocaleDateString()}`);
+L.push('');
+L.push('## Athletic measurements (film-derived)');
+if(s.runs.length){L.push('| Run | Top speed | 0–10 m | Peak accel | Distance |');
+L.push('|---|---|---|---|---|');
+s.runs.forEach(r=>{const a=r.analysis;
+L.push(`| ${r.label} | ${a.maxSpeed.toFixed(2)} m/s (${(a.maxSpeed*3.6).toFixed(1)} km/h) | ${a.time_0_10m?a.time_0_10m.toFixed(2)+' s':'n/a'} | ${a.peakAccel.toFixed(2)} m/s² | ${a.distance.toFixed(1)} m |`);});
+const best=Math.max(...s.runs.map(r=>r.analysis.maxSpeed));
+L.push('');L.push(`**Session top speed: ${best.toFixed(2)} m/s (${(best*3.6).toFixed(1)} km/h)** across ${s.runs.length} measured runs.`);
+if(s.calibration)L.push(`Calibration RMS error: ${s.calibration.rms.toFixed(2)} m from ${s.calibration.landmarks.length} landmarks.`);
+}else L.push('_No measured runs._');
+L.push('');L.push('## First-touch quality (film-graded)');
+{const t=s.touch;
+if(t&&t.total){
+L.push('| Context | Clean | Heavy | Lost | Clean % |');L.push('|---|---|---|---|---|');
+L.push(`| Open | ${t.clean} | ${t.heavy} | ${t.lost} | ${t.open?Math.round((t.clean/t.open)*100)+'%':'—'} |`);
+L.push(`| Under pressure | ${t.cleanP} | ${t.heavyP} | ${t.lostP} | ${t.rateP!=null?Math.round(t.rateP*100)+'%':'—'} |`);
+L.push(`| **All** | | | | **${Math.round(t.rate*100)}%** over ${t.total} graded touches |`);
+}else L.push('_No touches graded._');}
+L.push('');L.push('## Scanning & reactions');
+L.push(`- Scans: **${s.counters.scans}** over **${s.counters.receptions}** receptions`+
+ (s.counters.scansPerReception?` → **${s.counters.scansPerReception.toFixed(2)} scans/reception**`:''));
+L.push(`- Reaction to loss: ${s.counters.reactionToLoss.length?
+ '**'+(s.counters.reactionToLoss.reduce((a,b)=>a+b,0)/s.counters.reactionToLoss.length).toFixed(2)+' s** avg over '+s.counters.reactionToLoss.length+' losses':'_not measured_'}`);
+L.push('');L.push('## Intangibles rubric');
+L.push('| Category | Grade | Evidence |');L.push('|---|---|---|');
+for(const[k,v]of Object.entries(s.rubric))
+ L.push(`| ${k} | ${v.grade?v.grade+'/5':'—'} | ${v.note||''} |`);
+L.push('');L.push('## Clip log');
+if(s.clips.length)s.clips.forEach(c=>L.push(`- \`${fmtT(c.t)}\` — ${c.tag}`));
+else L.push('_No clips tagged._');
+L.push('');L.push('---');
+L.push('*Speeds estimated from calibrated film via pitch-line homography (pitch '+pitchL()+' × '+pitchW()+' m); treat as ±3–5%. '+
+ 'Scanning metric = head checks in the ~2 s window before receiving.*');
+return L.join('\n');}
+$('repBuild').onclick=()=>{$('reportOut').textContent=buildMarkdown();};
+$('repMd').onclick=()=>{download((($('sPlayer').value||'player').replace(/\s+/g,'_'))+'_film_report.md',buildMarkdown());};
+$('repJson').onclick=()=>{download((($('sPlayer').value||'session').replace(/\s+/g,'_'))+'_filmlab.json',JSON.stringify(buildSession(),null,2));};
+$('repImport').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;
+const rd=new FileReader();rd.onload=()=>{try{const s=JSON.parse(rd.result);
+$('sPlayer').value=s.meta?.player||'';$('sMatch').value=s.meta?.match||'';$('sComp').value=s.meta?.competition||'';
+state.runs=(s.runs||[]).map(r=>({label:r.label,points:r.points,analysis:r.analysis}));
+state.scans=s.counters?.scans||0;state.recs=s.counters?.receptions||0;
+state.lossTimes=s.counters?.reactionToLoss||[];state.clips=s.clips||[];
+if(s.rubric)Object.assign(state.rubric,s.rubric);
+renderRuns();renderClips();bumpCounters();alert('Session imported. Note: rubric grades restore into data/report; re-click buttons to show visually.');
+}catch(err){alert('Could not read that file: '+err.message);}};rd.readAsText(f);});
+function download(name,text){const a=document.createElement('a');
+a.href=URL.createObjectURL(new Blob([text],{type:'text/plain'}));a.download=name;a.click();}
+
+bumpCounters();liveRun();
+</script>
+</body>
+</html>

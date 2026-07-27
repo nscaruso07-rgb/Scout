@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scout Report</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700&family=Saira:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --field:#131824; --panel:#1B2230; --card:#222B3D; --hair:#2E3950;
+  --ink:#DCE3EF; --dim:#8A94A8;
+  --att-poor:#687181; --att-ok:#C8CFDB; --att-good:#5FBF6A; --att-elite:#E9C464;
+  --accent:#4E8FE0; --amber:#F2A93B; --alert:#D96552;
+  --disp:'Saira Condensed',system-ui,sans-serif;
+  --body:'Saira',system-ui,sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--field);color:var(--ink);font-family:var(--body);font-size:14px;line-height:1.45}
+button{font-family:var(--body);cursor:pointer}
+input,select,textarea{font-family:var(--body);background:var(--field);color:var(--ink);
+  border:1px solid var(--hair);border-radius:4px;padding:5px 8px;font-size:13px}
+input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+[contenteditable]:focus{outline:1px dashed var(--accent);outline-offset:2px}
+
+/* ---------- toolbar (hidden in view/print) ---------- */
+.toolbar{position:sticky;top:0;z-index:10;display:flex;gap:8px;align-items:center;flex-wrap:wrap;
+  padding:9px 16px;background:var(--panel);border-bottom:1px solid var(--hair)}
+.toolbar .brand{font-family:var(--disp);font-weight:700;font-size:17px;letter-spacing:.08em;text-transform:uppercase;margin-right:6px}
+.toolbar .brand b{color:var(--amber)}
+.btn{background:var(--card);border:1px solid var(--hair);color:var(--ink);border-radius:4px;padding:6px 12px;font-size:13px;font-weight:500}
+.btn:hover{border-color:var(--dim)}
+.btn.amber{background:var(--amber);border-color:var(--amber);color:#181205;font-weight:600}
+.toolbar .gap{flex:1}
+.toolbar .note{color:var(--dim);font-size:12px}
+body.view .toolbar,body.view .editOnly{display:none!important}
+
+/* ---------- page ---------- */
+.page{max-width:1060px;margin:18px auto 60px;padding:0 16px}
+
+/* header band */
+.head{display:flex;gap:18px;align-items:stretch;background:var(--panel);border:1px solid var(--hair);
+  border-radius:10px;overflow:hidden;margin-bottom:14px}
+.head .id{flex:1;padding:18px 20px}
+.head .name{font-family:var(--disp);font-weight:700;font-size:38px;line-height:1.02;letter-spacing:.01em;text-transform:uppercase}
+.head .sub{color:var(--dim);font-size:14px;margin-top:2px}
+.head .facts{display:flex;gap:0;flex-wrap:wrap;margin-top:14px}
+.fact{padding:2px 18px 2px 0;margin-right:18px;border-right:1px solid var(--hair)}
+.fact:last-child{border-right:none}
+.fact .k{font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--dim)}
+.fact .v{font-family:var(--mono);font-size:15px;font-weight:500}
+.head .badgeCol{display:flex;flex-direction:column;justify-content:center;gap:8px;padding:16px 20px;
+  background:var(--card);border-left:1px solid var(--hair);min-width:210px}
+.rec{font-family:var(--disp);font-weight:700;font-size:21px;letter-spacing:.08em;text-transform:uppercase;
+  text-align:center;padding:8px 10px;border-radius:6px;border:1.5px solid}
+.rec.sign{color:var(--att-good);border-color:var(--att-good)}
+.rec.short{color:var(--amber);border-color:var(--amber)}
+.rec.monitor{color:var(--accent);border-color:var(--accent)}
+.rec.pass{color:var(--dim);border-color:var(--dim)}
+.rec select{width:100%;margin-top:4px}
+.matchLine{text-align:center;font-size:12.5px;color:var(--dim)}
+.matchLine b{color:var(--ink);font-family:var(--mono)}
+
+/* grid layout */
+.cols{display:grid;grid-template-columns:1fr 340px;gap:14px}
+@media(max-width:900px){.cols{grid-template-columns:1fr}}
+.box{background:var(--panel);border:1px solid var(--hair);border-radius:10px;padding:14px 16px;margin-bottom:14px}
+.box h2{font-family:var(--disp);font-weight:600;font-size:16px;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--dim);margin-bottom:10px;display:flex;justify-content:space-between;align-items:baseline}
+.box h2 .src{font-family:var(--body);font-size:11px;letter-spacing:.05em;color:var(--dim);text-transform:none;font-weight:400}
+
+/* attribute grid */
+.attrCols{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+@media(max-width:640px){.attrCols{grid-template-columns:1fr}}
+.attrGroup h3{font-family:var(--disp);font-size:13.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--ink);border-bottom:1px solid var(--hair);padding-bottom:5px;margin-bottom:6px}
+.attr{display:flex;justify-content:space-between;align-items:center;padding:3.5px 2px;font-size:13px}
+.attr:nth-child(even){background:rgba(255,255,255,.02)}
+.attr .n{font-family:var(--mono);font-weight:600;font-size:14.5px;min-width:26px;text-align:right}
+.attr input{width:44px;text-align:right;font-family:var(--mono);padding:1px 4px}
+.a1{color:var(--att-poor)}.a2{color:var(--att-ok)}.a3{color:var(--att-good)}.a4{color:var(--att-elite)}
+
+/* ability board (signature) */
+.ability{background:linear-gradient(180deg,var(--card),var(--panel));text-align:center}
+.ability .lbl{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);margin-top:8px}
+.stars{display:inline-flex;gap:4px;margin:6px 0 2px}
+.stars svg{width:34px;height:34px}
+.ability .num{font-family:var(--mono);font-size:12.5px;color:var(--dim)}
+.ability .conf{font-size:12px;color:var(--dim);margin-top:8px;border-top:1px dashed var(--hair);padding-top:8px}
+.ability .editRow{display:flex;gap:6px;justify-content:center;align-items:center;margin-top:6px;font-size:12px;color:var(--dim)}
+.ability .editRow input{width:52px;text-align:center;font-family:var(--mono)}
+
+/* measurables */
+.meas .m{margin-bottom:9px}
+.meas .t{display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:3px}
+.meas .t b{font-family:var(--mono);font-weight:600;color:var(--amber)}
+.bar{height:7px;background:var(--field);border-radius:4px;overflow:hidden}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--amber));border-radius:4px}
+.meas .scaleNote{font-size:11px;color:var(--dim);margin-top:6px}
+
+/* radar */
+#radar{width:100%;display:block}
+
+/* pros/cons */
+.pc ul{list-style:none}
+.pc li{position:relative;padding:4px 22px 4px 18px;font-size:13.5px}
+.pc li::before{content:'';position:absolute;left:2px;top:11px;width:8px;height:8px;border-radius:2px}
+.pros li::before{background:var(--att-good)}
+.cons li::before{background:var(--alert)}
+.pc li [contenteditable]{display:inline-block;min-width:60px}
+.pc li .x{position:absolute;right:0;top:3px;color:var(--dim);background:none;border:none;font-size:14px}
+.pc .add{margin-top:4px}
+
+/* verdict */
+.verdict p[contenteditable]{font-size:14px;line-height:1.6;min-height:60px}
+.sig{display:flex;justify-content:space-between;color:var(--dim);font-size:12px;margin-top:12px;border-top:1px solid var(--hair);padding-top:8px}
+
+/* evidence table */
+table.ev{width:100%;border-collapse:collapse;font-size:12.5px}
+table.ev td,table.ev th{padding:5px 6px;border-bottom:1px solid var(--hair);text-align:left}
+table.ev th{color:var(--dim);font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:.08em}
+table.ev td.m{font-family:var(--mono);color:var(--amber)}
+
+.footNote{color:var(--dim);font-size:11.5px;margin-top:4px;line-height:1.5}
+
+@media print{
+  body{background:#fff;color:#111}
+  .toolbar,.editOnly{display:none!important}
+  .box,.head{border-color:#ccc;background:#fff;break-inside:avoid}
+  :root{--panel:#fff;--card:#f4f5f7;--field:#eee;--ink:#111;--dim:#555;--hair:#ccc}
+}
+</style>
+</head>
+<body>
+<div class="toolbar">
+  <span class="brand">Scout<b>Report</b></span>
+  <label class="btn">Import stats CSV<input type="file" id="inCsv" accept=".csv" hidden></label>
+  <select id="csvPlayer" style="display:none;max-width:190px"></select>
+  <label class="btn">Import Film Lab .json<input type="file" id="inFilm" accept=".json" hidden></label>
+  <label class="btn">Import Autotrack .json<input type="file" id="inAuto" accept=".json" hidden></label>
+  <span class="gap"></span>
+  <button class="btn" id="btnLoad">Open report</button>
+  <input type="file" id="inReport" accept=".json" hidden>
+  <button class="btn" id="btnSave">Save .json</button>
+  <button class="btn" id="btnPrint">Print / PDF</button>
+  <button class="btn amber" id="btnExport">Export report .html</button>
+</div>
+<div class="toolbar editOnly" style="top:auto;position:static;border-top:none">
+  <span class="note">Everything on the page is editable — click any text, number, or star value. Imports fill in what they can; your judgment fills the rest.</span>
+</div>
+
+<div class="page">
+  <!-- header -->
+  <div class="head">
+    <div class="id">
+      <div class="name" id="pName" contenteditable>Player Name</div>
+      <div class="sub"><span id="pClub" contenteditable>Club</span> · <span id="pComp" contenteditable>Competition</span></div>
+      <div class="facts">
+        <div class="fact"><div class="k">Position</div><div class="v" id="pPos" contenteditable>RB</div></div>
+        <div class="fact"><div class="k">Age</div><div class="v" id="pAge" contenteditable>21</div></div>
+        <div class="fact"><div class="k">Height</div><div class="v" id="pHt" contenteditable>—</div></div>
+        <div class="fact"><div class="k">Foot</div><div class="v" id="pFoot" contenteditable>—</div></div>
+        <div class="fact"><div class="k">Contract</div><div class="v" id="pCon" contenteditable>—</div></div>
+        <div class="fact"><div class="k">Minutes</div><div class="v" id="pMin" contenteditable>—</div></div>
+      </div>
+    </div>
+    <div class="badgeCol">
+      <div class="rec monitor" id="recBadge">Monitor
+        <select id="recSel" class="editOnly">
+          <option>Sign</option><option>Shortlist</option><option selected>Monitor</option><option>Pass</option>
+        </select>
+      </div>
+      <div class="matchLine">Archetype match <b id="archMatch" contenteditable>—</b><br>
+        <span id="archName" contenteditable>vs —</span></div>
+    </div>
+  </div>
+
+  <div class="cols">
+    <div><!-- left column -->
+      <div class="box">
+        <h2>Attributes <span class="src">1–20 · percentile-derived where imported, scout-set otherwise</span></h2>
+        <div class="attrCols" id="attrCols"></div>
+      </div>
+
+      <div class="box pc">
+        <h2>Strengths</h2>
+        <ul class="pros" id="prosList"></ul>
+        <button class="btn add editOnly" onclick="addPC('pros')">+ add</button>
+        <h2 style="margin-top:14px">Development areas</h2>
+        <ul class="cons" id="consList"></ul>
+        <button class="btn add editOnly" onclick="addPC('cons')">+ add</button>
+      </div>
+
+      <div class="box verdict">
+        <h2>Scout verdict</h2>
+        <p id="verdict" contenteditable>Write the verdict here — level-translation view, role fit, risk, and a concrete recommendation with fee/contract context.</p>
+        <div class="sig">
+          <span>Scout: <span id="scoutName" contenteditable>Your name</span></span>
+          <span>Matches viewed: <span id="matchesViewed" contenteditable>—</span></span>
+          <span id="repDate"></span>
+        </div>
+      </div>
+
+      <div class="box">
+        <h2>Evidence — clip log <span class="src">from Film Lab session</span></h2>
+        <table class="ev"><thead><tr><th>Time</th><th>Category</th></tr></thead><tbody id="clipRows"></tbody></table>
+      </div>
+    </div>
+
+    <div><!-- right column -->
+      <div class="box ability">
+        <div class="lbl">Current ability</div>
+        <div class="stars" id="caStars"></div>
+        <div class="num" id="caNum"></div>
+        <div class="editRow editOnly">CA <input type="number" id="caIn" min="0" max="100" step="1"> / 100</div>
+        <div class="lbl" style="margin-top:14px">Potential ability</div>
+        <div class="stars" id="paStars"></div>
+        <div class="num" id="paNum"></div>
+        <div class="editRow editOnly">PA <input type="number" id="paLoIn" min="0" max="100"> – <input type="number" id="paHiIn" min="0" max="100"> / 100</div>
+        <div class="conf" id="abilityConf">Ratings are relative to the assessed level. PA range reflects age, athletic ceiling and mental profile.</div>
+        <div class="editRow editOnly">vs level <input id="levelName" style="width:150px" placeholder="e.g. USL Championship"></div>
+      </div>
+
+      <div class="box meas">
+        <h2>Measurables <span class="src">film-derived</span></h2>
+        <div id="measList"></div>
+        <div class="scaleNote" id="measNote">Bars scale vs professional reference bands. Top speed 9.5+ m/s and 0–10 m under 1.75 s are elite-level markers.</div>
+      </div>
+
+      <div class="box">
+        <h2>Profile radar <span class="src">percentile vs position pool</span></h2>
+        <canvas id="radar" width="620" height="520"></canvas>
+      </div>
+
+      <div class="box">
+        <h2>Scanning & reactions <span class="src">Film Lab counters</span></h2>
+        <div id="mentalStats" style="font-size:13px;line-height:1.9"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footNote">Speeds and accelerations estimated from calibrated film (±3–5%). Percentiles computed within position pool, minimum-minutes filtered.
+  Current/Potential ability are structured scout judgments — the baseline is computed transparently from the data, then adjusted by the scout. This report was produced with the Player Scout pipeline (data screen → film measurement → graded intangibles).</div>
+</div>
+
+<script id="stateData" type="application/json">null</script>
+<script>
+/* ============================ state ============================ */
+const DEFAULT_STATE = {
+  meta:{name:"Sample Player",club:"Sample FC",comp:"Demo League",pos:"RB",age:"20",
+        ht:"1.81 m",foot:"Right",con:"2027",min:"1,420",level:"USL Championship",
+    scout:"", matchesViewed:"4", rec:"Shortlist",
+    archMatch:"80.7 / 100", archName:"vs Achraf Hakimi archetype"},
+  // technical attrs keyed by metric; value 1-20; pct kept for radar
+  tech:{"Progressive carries":{v:15,pct:72},"Progressive passes":{v:12,pct:58},
+        "Final-third entries":{v:13,pct:62},"Crossing":{v:10,pct:47},
+        "Key passes":{v:11,pct:52},"Dribbling":{v:14,pct:68},
+        "Chance creation (xA)":{v:9,pct:41}},
+  mental:{"Scanning":{v:14},"First touch under pressure":{v:12},"Decision speed":{v:13},
+          "Reaction to loss":{v:15},"Off-ball discipline":{v:11},
+          "1v1 defending":{v:12},"Aerial timing":{v:9},"Adversity response":{v:13}},
+  physical:{"Top speed":{v:14},"Acceleration":{v:15},"Repeat sprints":{v:12},
+            "Pressing volume":{v:13,pct:64},"Defensive actions":{v:12,pct:57},
+            "Ball recoveries":{v:13,pct:61}},
+  measur:[{k:"Top speed",v:"8.92 m/s · 32.1 km/h",fill:.78},
+          {k:"0–10 m",v:"1.86 s",fill:.72},
+          {k:"Peak acceleration",v:"3.4 m/s²",fill:.68},
+          {k:"Sprints ≥ 5.5 m/s (per 90)",v:"14",fill:.6}],
+  counters:{scans:null,receptions:null,ratio:null,loss:null},
+  clips:[],
+  pros:["Elite acceleration over the first 10 m — wins separation on the overlap",
+        "Counterpresses within 2 s of losing possession, consistently",
+        "Progressive carrying volume in the top quartile of the pool"],
+  cons:["Crossing efficiency below pool median — end product lags the athleticism",
+        "Aerial timing untested against physical target forwards"],
+  verdict:"Sample verdict — replace with the level-translation view, role fit, risk assessment and a concrete recommendation.",
+  ca:58, paLo:66, paHi:78,
+};
+let S = JSON.parse(document.getElementById('stateData').textContent) || JSON.parse(JSON.stringify(DEFAULT_STATE));
+const VIEW = document.body.classList.contains('view');
+
+/* ============================ helpers ============================ */
+const $ = id => document.getElementById(id);
+const attClass = v => v>=16?'a4':v>=11?'a3':v>=6?'a2':'a1';
+const pctTo20 = p => Math.max(1, Math.min(20, Math.ceil(p/5)));
+
+/* physical reference bands (professional men's football, documented in README) */
+function speedTo20(ms){ // top speed m/s
+  const bands=[[7.0,4],[7.6,6],[8.1,8],[8.5,10],[8.8,12],[9.1,14],[9.4,16],[9.7,18],[10.0,19]];
+  let r=2; for(const [t,v] of bands) if(ms>=t) r=v; return ms>=10.2?20:r;
+}
+function accelTo20(a){ // peak accel m/s^2
+  const bands=[[1.8,4],[2.2,6],[2.6,8],[3.0,11],[3.4,13],[3.8,15],[4.2,17],[4.6,19]];
+  let r=2; for(const [t,v] of bands) if(a>=t) r=v; return a>=5?20:r;
+}
+
+/* CA/PA baseline (transparent; scout overrides via inputs) */
+function computeBaselines(){
+  const avg20 = obj => { const vs=Object.values(obj).map(o=>o.v); return vs.reduce((a,b)=>a+b,0)/vs.length; };
+  const t=avg20(S.tech), m=avg20(S.mental), p=avg20(S.physical);
+  const ca = Math.round((t*0.45 + p*0.30 + m*0.25) * 5); // 1-20 -> 0-100
+  const age = parseInt(S.meta.age)||24;
+  const head = age<=19?30 : age<=21?22 : age<=23?15 : age<=26?8 : 3;
+  const ceil = (p/20)*0.6 + (m/20)*0.4;            // athletic + mental scaling
+  return {ca, paLo:Math.min(100,Math.round(ca+head*0.4*ceil)),
+              paHi:Math.min(100,Math.round(ca+head*ceil))};
+}
+
+/* ============================ render ============================ */
+function star(fill){ // fill 0..1 -> svg
+  const id='g'+Math.random().toString(36).slice(2,8);
+  return `<svg viewBox="0 0 24 24"><defs><linearGradient id="${id}"><stop offset="${fill*100}%" stop-color="#E9C464"/><stop offset="${fill*100}%" stop-color="transparent"/></linearGradient></defs>
+  <path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4 6.1 20.5l1.2-6.5L2.5 9.4l6.6-.9z"
+  fill="url(#${id})" stroke="#E9C464" stroke-width="1.3" stroke-linejoin="round"/></svg>`;
+}
+function starRange(lo,hi){ // lo/hi 0..5 -> solid to lo, translucent band to hi
+  let out='';
+  for(let i=0;i<5;i++){
+    const f=Math.max(0,Math.min(1,lo-i));
+    const uid='pr'+i+Math.random().toString(36).slice(2,7);
+    const bandFill=i<hi?'rgba(233,196,100,.18)':'transparent';
+    out+=`<svg viewBox="0 0 24 24">
+    <defs><linearGradient id="${uid}"><stop offset="${f*100}%" stop-color="#E9C464"/><stop offset="${f*100}%" stop-color="${bandFill}"/></linearGradient></defs>
+    <path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4 6.1 20.5l1.2-6.5L2.5 9.4l6.6-.9z"
+    fill="url(#${uid})" stroke="#E9C464" stroke-width="1.3" stroke-linejoin="round" stroke-dasharray="${i>=Math.floor(lo)&&i<hi&&f<1?'2.5 2':'0'}"/></svg>`;
+  }
+  return out;
+}
+function renderStars(){
+  const caS=S.ca/20, lo=S.paLo/20, hi=S.paHi/20;
+  $('caStars').innerHTML=[0,1,2,3,4].map(i=>star(Math.max(0,Math.min(1,caS-i)))).join('');
+  $('caNum').textContent=`${S.ca} / 100 · ${caS.toFixed(1)}★ vs ${S.meta.level||'assessed level'}`;
+  $('paStars').innerHTML=starRange(lo,hi);
+  $('paNum').textContent=`${S.paLo}–${S.paHi} / 100 · ${lo.toFixed(1)}–${hi.toFixed(1)}★`;
+  $('caIn').value=S.ca;$('paLoIn').value=S.paLo;$('paHiIn').value=S.paHi;
+  $('levelName').value=S.meta.level||'';
+}
+function renderAttrs(){
+  const groups=[["Technical",S.tech],["Mental / Intangibles",S.mental],["Physical",S.physical]];
+  $('attrCols').innerHTML=groups.map(([title,obj])=>`<div class="attrGroup"><h3>${title}</h3>`+
+    Object.entries(obj).map(([k,o])=>`<div class="attr"><span>${k}</span>`+
+      (VIEW?`<span class="n ${attClass(o.v)}">${o.v}</span>`
+           :`<input type="number" min="1" max="20" value="${o.v}" class="${attClass(o.v)}"
+              data-g="${title[0]}" data-k="${k}">`)+
+    `</div>`).join('')+`</div>`).join('');
+  if(!VIEW) document.querySelectorAll('.attr input').forEach(inp=>{
+    inp.addEventListener('change',()=>{
+      const g=inp.dataset.g==='T'?S.tech:inp.dataset.g==='M'?S.mental:S.physical;
+      g[inp.dataset.k].v=Math.max(1,Math.min(20,+inp.value||1));
+      inp.className=attClass(g[inp.dataset.k].v);
+      suggestAbility(false); drawRadar();
+    });
+  });
+}
+function renderMeas(){
+  $('measList').innerHTML=S.measur.map(m=>`<div class="m"><div class="t"><span>${m.k}</span><b>${m.v}</b></div>
+    <div class="bar"><i style="width:${Math.round(m.fill*100)}%"></i></div></div>`).join('')
+    || '<span style="color:var(--dim);font-size:12.5px">Import Autotrack / Film Lab data, or leave for stats-only reports.</span>';
+}
+function renderPC(){
+  for(const key of ['pros','cons']){
+    $(key+'List').innerHTML=S[key].map((txt,i)=>`<li><span${VIEW?'':' contenteditable'} data-k="${key}" data-i="${i}">${txt}</span>`+
+      (VIEW?'':`<button class="x editOnly" onclick="delPC('${key}',${i})">×</button>`)+`</li>`).join('');
+  }
+  if(!VIEW)document.querySelectorAll('.pc [contenteditable]').forEach(el=>
+    el.addEventListener('input',()=>{S[el.dataset.k][+el.dataset.i]=el.textContent;}));
+}
+function addPC(key){S[key].push('…');renderPC();}
+function delPC(key,i){S[key].splice(i,1);renderPC();}
+function renderClips(){
+  $('clipRows').innerHTML=S.clips.length?S.clips.map(c=>{
+    const t=Math.floor(c.t/60)+':'+String(Math.floor(c.t%60)).padStart(2,'0');
+    return `<tr><td class="m">${t}</td><td>${c.tag}</td></tr>`;}).join('')
+    :'<tr><td colspan="2" style="color:var(--dim)">No clips imported.</td></tr>';
+}
+function renderCounters(){
+  const c=S.counters, li=[];
+  if(c.ratio!=null) li.push(`Scans per reception: <b class="m" style="color:var(--amber);font-family:var(--mono)">${(+c.ratio).toFixed(2)}</b> (${c.scans} scans / ${c.receptions} receptions)`);
+  if(c.loss!=null) li.push(`Avg reaction to loss: <b style="color:var(--amber);font-family:var(--mono)">${(+c.loss).toFixed(2)} s</b>`);
+  $('mentalStats').innerHTML=li.join('<br>')||'<span style="color:var(--dim);font-size:12.5px">Import a Film Lab session to populate.</span>';
+}
+function drawRadar(){
+  const cv=$('radar'),ctx=cv.getContext&&cv.getContext('2d');
+  if(!ctx)return;
+  const entries=[...Object.entries(S.tech),...Object.entries(S.physical)]
+    .filter(([,o])=>o.pct!=null).slice(0,10);
+  ctx.clearRect(0,0,cv.width,cv.height);
+  if(entries.length<3){ctx.fillStyle='#8A94A8';ctx.font='14px Saira';
+    ctx.fillText('Import stats CSV to draw the percentile radar.',20,40);return;}
+  const cx=cv.width/2,cy=cv.height/2+6,R=Math.min(cx,cy)-86,n=entries.length;
+  const pt=(i,r)=>{const a=-Math.PI/2+i*2*Math.PI/n;return[cx+r*Math.cos(a),cy+r*Math.sin(a)];};
+  ctx.strokeStyle='#2E3950';ctx.lineWidth=1;
+  for(const f of [.25,.5,.75,1]){ctx.beginPath();
+    for(let i=0;i<=n;i++){const[x,y]=pt(i%n,R*f);i?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.stroke();}
+  for(let i=0;i<n;i++){const[x,y]=pt(i,R);ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(x,y);ctx.stroke();}
+  ctx.beginPath();
+  for(let i=0;i<=n;i++){const o=entries[i%n][1];const[x,y]=pt(i%n,R*(o.pct/100));i?ctx.lineTo(x,y):ctx.moveTo(x,y);}
+  ctx.closePath();ctx.fillStyle='rgba(78,143,224,.28)';ctx.fill();
+  ctx.strokeStyle='#4E8FE0';ctx.lineWidth=2;ctx.stroke();
+  ctx.fillStyle='#DCE3EF';ctx.font='600 13px Saira';ctx.textAlign='center';
+  entries.forEach(([k,o],i)=>{const[x,y]=pt(i,R+40);
+    const words=k.split(' ');ctx.fillText(words.slice(0,2).join(' '),x,y-(words.length>2?7:0));
+    if(words.length>2)ctx.fillText(words.slice(2).join(' '),x,y+8);
+    ctx.fillStyle='#F2A93B';ctx.font='600 12px IBM Plex Mono';
+    ctx.fillText(o.pct,x,y+22);ctx.fillStyle='#DCE3EF';ctx.font='600 13px Saira';});
+}
+function renderMeta(){
+  const m=S.meta;
+  const map={pName:'name',pClub:'club',pComp:'comp',pPos:'pos',pAge:'age',pHt:'ht',
+             pFoot:'foot',pCon:'con',pMin:'min',archMatch:'archMatch',archName:'archName',
+             scoutName:'scout',matchesViewed:'matchesViewed'};
+  for(const [id,k] of Object.entries(map)){$(id).textContent=m[k]||'—';
+    if(!VIEW)$(id).addEventListener('input',()=>{m[k]=$(id).textContent;if(k==='age')suggestAbility(false);});}
+  $('verdict').textContent=S.verdict;
+  if(!VIEW)$('verdict').addEventListener('input',()=>S.verdict=$('verdict').textContent);
+  $('repDate').textContent=new Date().toLocaleDateString();
+  setRec(m.rec);
+  if(!VIEW){$('recSel').value=m.rec;$('recSel').addEventListener('change',e=>{m.rec=e.target.value;setRec(m.rec);});}
+}
+function setRec(v){const b=$('recBadge');
+  b.className='rec '+({Sign:'sign',Shortlist:'short',Monitor:'monitor',Pass:'pass'}[v]||'monitor');
+  b.childNodes[0].textContent=v;}
+function suggestAbility(force){
+  const b=computeBaselines();
+  if(force||!S._caTouched){S.ca=b.ca;S.paLo=b.paLo;S.paHi=b.paHi;}
+  renderStars();
+}
+
+/* ============================ imports ============================ */
+function parseCSV(text){ // minimal RFC-ish parser (quotes, commas)
+  const rows=[],row=[];let cur='',q=false,r=[];
+  for(let i=0;i<text.length;i++){const c=text[i];
+    if(q){if(c==='"'){if(text[i+1]==='"'){cur+='"';i++;}else q=false;}else cur+=c;}
+    else if(c==='"')q=true;
+    else if(c===','){r.push(cur);cur='';}
+    else if(c==='\n'||c==='\r'){if(c==='\r'&&text[i+1]==='\n')i++;r.push(cur);cur='';
+      if(r.length>1||r[0]!=='')rows.push(r);r=[];}
+    else cur+=c;}
+  if(cur!==''||r.length){r.push(cur);rows.push(r);}
+  return rows;
+}
+const TECH_MAP={progressive_carries:'Progressive carries',progressive_passes:'Progressive passes',
+  passes_into_final_third:'Final-third entries',crosses:'Crossing',key_passes:'Key passes',
+  dribbles_completed:'Dribbling',xa:'Chance creation (xA)',xg:'Shot threat (xG)',
+  goals:'Finishing',shots:'Shot volume'};
+const PHYS_MAP={pressures:'Pressing volume',pressures_att_third:'High pressing',
+  tackles_and_interceptions:'Defensive actions',ball_recoveries:'Ball recoveries'};
+let CSV=null;
+$('inCsv')?.addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;
+  const rd=new FileReader();rd.onload=()=>{
+    const rows=parseCSV(rd.result);const head=rows[0];
+    CSV={head,rows:rows.slice(1)};
+    const nameIdx=head.indexOf('player_name');
+    const sel=$('csvPlayer');sel.innerHTML='<option value="">— pick player —</option>';
+    CSV.rows.forEach((r,i)=>{const o=document.createElement('option');o.value=i;o.textContent=r[nameIdx];sel.appendChild(o);});
+    sel.style.display='';};
+  rd.readAsText(f);});
+$('csvPlayer')?.addEventListener('change',e=>{
+  if(!CSV||e.target.value==='')return;
+  const r=CSV.rows[+e.target.value],h=CSV.head,get=c=>{const i=h.indexOf(c);return i<0?null:r[i];};
+  S.meta.name=get('player_name')||S.meta.name;
+  S.meta.club=get('team')||S.meta.club;
+  S.meta.pos=get('primary_position')||S.meta.pos;
+  S.meta.min=get('minutes')?Math.round(+get('minutes')).toLocaleString():S.meta.min;
+  S.tech={};S.physical=Object.fromEntries(Object.entries(S.physical)
+    .filter(([k])=>['Top speed','Acceleration','Repeat sprints'].includes(k)));
+  for(const c of h){if(!c.endsWith('_p90_pct'))continue;
+    const key=c.replace('_p90_pct','');const pct=Math.round(+r[h.indexOf(c)]);
+    if(isNaN(pct))continue;
+    if(TECH_MAP[key])S.tech[TECH_MAP[key]]={v:pctTo20(pct),pct};
+    else if(PHYS_MAP[key])S.physical[PHYS_MAP[key]]={v:pctTo20(pct),pct};}
+  suggestAbility(true);renderAll();});
+$('inFilm')?.addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;
+  const rd=new FileReader();rd.onload=()=>{try{
+    const j=JSON.parse(rd.result);
+    if(j.meta?.player)S.meta.name=j.meta.player;
+    if(j.meta?.competition)S.meta.comp=j.meta.competition;
+    if(j.rubric)for(const[k,v]of Object.entries(j.rubric))
+      if(v.grade)S.mental[k]={v:Math.round(v.grade*4)}; // 1-5 -> 4-20
+    const c=j.counters||{};
+    S.counters={scans:c.scans,receptions:c.receptions,ratio:c.scansPerReception,
+      loss:c.reactionToLoss?.length?c.reactionToLoss.reduce((a,b)=>a+b,0)/c.reactionToLoss.length:null};
+    S.clips=j.clips||[];
+    if(j.touch?.total){const t=j.touch;
+      const row={k:'First-touch clean % (pressured)',
+        v:(t.rateP!=null?Math.round(t.rateP*100)+'%':'—')+' · '+Math.round(t.rate*100)+'% overall · '+t.total+' graded',
+        fill:t.rateP!=null?t.rateP:t.rate};
+      const i=S.measur.findIndex(x=>x.k===row.k);if(i>=0)S.measur[i]=row;else S.measur.push(row);
+      if(t.rateP!=null&&(t.cleanP+t.heavyP+t.lostP)>=10)
+        S.mental['First touch under pressure']={v:Math.max(1,Math.min(20,Math.round(t.rateP*20)))};
+    }
+    if(j.runs?.length){const best=Math.max(...j.runs.map(r=>r.analysis.maxSpeed));
+      const acc=Math.max(...j.runs.map(r=>r.analysis.peakAccel));
+      mergeMeasur(best,acc,null);}
+    suggestAbility(true);renderAll();
+  }catch(err){alert('Could not read Film Lab file: '+err.message);}};rd.readAsText(f);});
+$('inAuto')?.addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;
+  const rd=new FileReader();rd.onload=()=>{try{
+    const j=JSON.parse(rd.result);
+    mergeMeasur(j.max_speed,j.peak_accel,j.sprints?.length);
+    suggestAbility(true);renderAll();
+  }catch(err){alert('Could not read Autotrack file: '+err.message);}};rd.readAsText(f);});
+function mergeMeasur(vmax,amax,sprints){
+  const M=[];
+  if(vmax){M.push({k:'Top speed',v:vmax.toFixed(2)+' m/s · '+(vmax*3.6).toFixed(1)+' km/h',
+    fill:Math.min(1,vmax/10.2)});S.physical['Top speed']={v:speedTo20(vmax)};}
+  if(amax){M.push({k:'Peak acceleration',v:amax.toFixed(2)+' m/s²',fill:Math.min(1,amax/5)});
+    S.physical['Acceleration']={v:accelTo20(amax)};}
+  if(sprints!=null)M.push({k:'Sprints ≥ 5.5 m/s (tracked spell)',v:String(sprints),fill:Math.min(1,sprints/20)});
+  // merge by key
+  for(const m of M){const i=S.measur.findIndex(x=>x.k===m.k);
+    if(i>=0)S.measur[i]=m;else S.measur.push(m);}
+}
+
+/* ============================ save / export ============================ */
+$('caIn')?.addEventListener('change',e=>{S.ca=+e.target.value;S._caTouched=true;renderStars();});
+$('paLoIn')?.addEventListener('change',e=>{S.paLo=+e.target.value;S._caTouched=true;renderStars();});
+$('paHiIn')?.addEventListener('change',e=>{S.paHi=+e.target.value;S._caTouched=true;renderStars();});
+$('levelName')?.addEventListener('change',e=>{S.meta.level=e.target.value;renderStars();});
+$('btnSave')?.addEventListener('click',()=>download(fname('json'),JSON.stringify(S,null,2)));
+$('btnLoad')?.addEventListener('click',()=>$('inReport').click());
+$('inReport')?.addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;
+  const rd=new FileReader();rd.onload=()=>{try{S=JSON.parse(rd.result);renderAll();}
+  catch(err){alert('Not a report file: '+err.message);}};rd.readAsText(f);});
+$('btnPrint')?.addEventListener('click',()=>window.print());
+$('btnExport')?.addEventListener('click',()=>{
+  const doc=document.documentElement.cloneNode(true);
+  doc.querySelector('#stateData').textContent=JSON.stringify(S);
+  doc.querySelector('body').classList.add('view');
+  doc.querySelectorAll('input,select').forEach(el=>{if(el.closest('.toolbar'))el.remove();});
+  doc.querySelectorAll('[contenteditable]').forEach(el=>el.removeAttribute('contenteditable'));
+  download(fname('html'),'<!DOCTYPE html>\n'+doc.outerHTML);});
+function fname(ext){return (S.meta.name||'player').replace(/\s+/g,'_')+'_scout_report.'+ext;}
+function download(name,text){const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([text],{type:'text/plain'}));a.download=name;a.click();}
+
+/* ============================ boot ============================ */
+function renderAll(){renderMeta();renderAttrs();renderStars();renderMeas();renderPC();renderClips();renderCounters();drawRadar();}
+renderAll();
+if(document.fonts?.ready)document.fonts.ready.then(drawRadar);
+</script>
+</body>
+</html>
