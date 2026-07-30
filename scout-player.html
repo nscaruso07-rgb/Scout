@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0E1412">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Scout">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>Scout a Player</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --pitch:#0E1412; --raised:#18211C; --line:#2B3830; --chalk:#E9E5D8; --dim:#93A08F;
+  --clean:#57B368; --heavy:#E0A340; --lost:#D45B47; --accent:#4E9BE0;
+  --disp:'Barlow Condensed',system-ui,sans-serif; --body:'Barlow',system-ui,sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,monospace;
+  --safe-b:env(safe-area-inset-bottom,0px); --safe-t:env(safe-area-inset-top,0px);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overscroll-behavior:none}
+body{background:var(--pitch);color:var(--chalk);font-family:var(--body);
+  display:flex;flex-direction:column;height:100dvh;overflow:hidden;-webkit-user-select:none;user-select:none}
+button{font-family:var(--body);cursor:pointer;border:none;background:none;color:inherit}
+input{font-family:var(--body)}
+.bar{display:flex;align-items:center;gap:10px;padding:calc(var(--safe-t) + 9px) 14px 9px;
+  background:var(--raised);border-bottom:1px solid var(--line);flex-shrink:0}
+.bar .logo{font-family:var(--disp);font-weight:700;font-size:18px;letter-spacing:.06em;text-transform:uppercase}
+.bar .logo b{color:var(--clean)}
+.bar .who{font-size:12px;color:var(--dim);line-height:1.15;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;flex:1}
+.bar .who b{color:var(--chalk);font-weight:600;display:block;font-size:13px}
+.bar .menu{width:36px;height:36px;border-radius:9px;background:var(--pitch);border:1px solid var(--line);font-size:18px;display:grid;place-items:center;flex-shrink:0}
+
+.screen{background:#000;position:relative;flex-shrink:0;aspect-ratio:16/9;max-height:34vh;display:flex;align-items:center;justify-content:center}
+video,#ytwrap{width:100%;height:100%}
+#ytwrap{display:none}#ytwrap iframe{width:100%;height:100%;border:0}
+video{object-fit:contain}
+.start{position:absolute;inset:0;display:flex;flex-direction:column;gap:12px;align-items:center;justify-content:center;text-align:center;padding:18px}
+.start b.h{font-family:var(--disp);font-size:22px;letter-spacing:.04em;text-transform:uppercase;line-height:1}
+.start p{color:var(--dim);font-size:12.5px;line-height:1.45;max-width:300px}
+.urlbox{display:flex;gap:7px;width:100%;max-width:340px}
+.urlbox input{flex:1;background:var(--raised);border:1px solid var(--line);border-radius:10px;padding:11px;color:var(--chalk);font-size:14px}
+.urlbox button{background:var(--clean);color:#0b1a0e;border-radius:10px;padding:0 15px;font-weight:700;font-size:14px}
+.altrow{display:flex;gap:8px}
+.pill{background:var(--raised);border:1px solid var(--line);border-radius:20px;padding:8px 14px;font-size:12.5px;font-weight:600}
+
+.body{flex:1;min-height:0;overflow-y:auto;padding:12px 14px calc(var(--safe-b) + 90px)}
+.comp{position:sticky;top:0;z-index:5;background:linear-gradient(180deg,var(--pitch) 80%,transparent);padding-bottom:8px;margin-bottom:4px}
+.compcard{background:var(--raised);border:1px solid var(--accent);border-radius:13px;padding:12px 14px}
+.compcard .lab{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+.compcard .big{font-family:var(--disp);font-size:23px;font-weight:700;letter-spacing:.02em;line-height:1.05;color:var(--accent)}
+.compcard .pct{font-family:var(--mono);font-size:14px;color:var(--chalk)}
+.compcard .runner{font-size:12px;color:var(--dim);margin-top:3px}
+.compcard .desc{font-size:12px;color:var(--chalk);margin-top:6px;line-height:1.4}
+
+.sec{font-family:var(--disp);font-size:14px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin:16px 2px 8px}
+.axis{margin-bottom:12px}
+.axis .top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px}
+.axis .nm{font-size:14px;font-weight:600}
+.axis .hint{font-size:11px;color:var(--dim);display:block;font-weight:400}
+.axis .val{font-family:var(--mono);font-size:13px;color:var(--accent);font-weight:600}
+.seg{display:flex;gap:5px}
+.seg button{flex:1;background:var(--raised);border:1px solid var(--line);border-radius:9px;padding:11px 2px;font-size:11px;font-weight:600;color:var(--dim);line-height:1.1;transition:all .1s}
+.seg button:active{transform:scale(.95)}
+.seg button.on{background:var(--accent);border-color:var(--accent);color:#08121e}
+.seg.film button.on{background:var(--clean);border-color:var(--clean);color:#08160b}
+
+.foot{position:fixed;left:0;right:0;bottom:0;display:flex;gap:9px;padding:10px 14px calc(var(--safe-b) + 10px);
+  background:linear-gradient(180deg,transparent,var(--pitch) 30%)}
+.foot button{flex:1;border-radius:12px;padding:14px;font-size:15px;font-weight:600}
+.foot .report{background:var(--clean);color:#0b1a0e}
+.foot .save{background:var(--raised);border:1px solid var(--line);color:var(--chalk);flex:0 0 auto;padding:14px 18px}
+
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.6);opacity:0;pointer-events:none;transition:opacity .2s;z-index:20}
+.scrim.on{opacity:1;pointer-events:auto}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:21;background:var(--raised);border-top:1px solid var(--line);border-radius:18px 18px 0 0;padding:8px 16px calc(var(--safe-b) + 18px);transform:translateY(100%);transition:transform .25s;max-height:86vh;overflow-y:auto}
+.sheet.on{transform:translateY(0)}
+.sheet .grab{width:40px;height:4px;border-radius:2px;background:var(--line);margin:8px auto 14px}
+.field{margin-bottom:10px}.field label{display:block;font-size:12px;color:var(--dim);margin-bottom:4px}
+.field input{width:100%;background:var(--pitch);border:1px solid var(--line);border-radius:9px;padding:11px;color:var(--chalk);font-size:15px}
+.row2{display:flex;gap:9px}.row2>*{flex:1}
+#reportView{font-size:13px;line-height:1.5}
+#reportView h3{font-family:var(--disp);font-size:20px;text-transform:uppercase;letter-spacing:.03em;margin-bottom:2px}
+#reportView .rc{background:var(--pitch);border:1px solid var(--line);border-radius:10px;padding:12px;margin:10px 0}
+#reportView .rrow{display:flex;justify-content:space-between;font-size:12.5px;padding:3px 0}
+#reportView .rrow b{font-family:var(--mono)}
+.note{color:var(--dim);font-size:11.5px;line-height:1.5}
+@media(min-width:760px){body{max-width:560px;margin:0 auto;border-left:1px solid var(--line);border-right:1px solid var(--line)}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="bar">
+  <div class="logo">Scout<b>.</b></div>
+  <div class="who" id="who">Grade a player from film</div>
+  <button class="menu" id="btnMenu">&#9776;</button>
+</div>
+
+<div class="screen">
+  <video id="vid" playsinline webkit-playsinline></video>
+  <div id="ytwrap"><div id="ytplayer"></div></div>
+  <div class="start" id="start">
+    <b class="h">Load the match</b>
+    <p>Paste a YouTube link (Serie C/D, an academy game, anywhere) and grade the player as you watch.</p>
+    <div class="urlbox"><input id="url" type="url" inputmode="url" placeholder="youtube.com/watch?v=..."><button id="btnLoad">Load</button></div>
+    <div class="altrow"><label class="pill"><input type="file" id="inVid" accept="video/*" hidden>Use a file</label></div>
+  </div>
+</div>
+
+<div class="body" id="mainBody">
+  <div class="comp">
+    <div class="compcard">
+      <div class="lab">Plays most like</div>
+      <div class="big" id="compName">Grade to see the comp</div>
+      <div class="pct" id="compPct"></div>
+      <div class="runner" id="compRunner"></div>
+      <div class="desc" id="compDesc"></div>
+    </div>
+  </div>
+
+  <div class="sec">Style &mdash; feeds the comp</div>
+  <div id="styleAxes"></div>
+
+  <div class="sec">Film read &mdash; what stats can&rsquo;t see</div>
+  <div id="filmAxes"></div>
+  <p class="note" style="margin-top:6px">These don&rsquo;t change the comp &mdash; they&rsquo;re the differentiator the archetype can&rsquo;t tell you: how fast, how smooth, how composed.</p>
+</div>
+
+<div class="foot">
+  <button class="report" id="btnReport">Build report</button>
+  <button class="save" id="btnSave">Save</button>
+</div>
+
+<div class="scrim" id="scrim"></div>
+<div class="sheet" id="sheet">
+  <div class="grab"></div>
+  <div id="sheetContent"></div>
+</div>
+
+<script>
+const LIB = {"axes":["progressive_passes","progressive_carries","passes_into_final_third","key_passes","xa","touch_security_pressured","touch_into_stride","ball_recoveries","tackles_and_interceptions"],"pool_n":115,"archetypes":{"Ball-progressing 8":{"references":["Luka Modri\u0107","Pedri"],"description":"Carries and passes the ball forward from midfield; the tempo-setter","vector":{"progressive_passes":100.0,"progressive_carries":80.0,"passes_into_final_third":99.0,"key_passes":63.0,"xa":68.0,"touch_security_pressured":75.0,"touch_into_stride":58.0,"ball_recoveries":89.0,"tackles_and_interceptions":86.0}},"Box-to-box engine":{"references":["Jude Bellingham","Federico Valverde","Rodrigo De Paul"],"description":"Progression plus defensive volume and late runs; covers ground","vector":{"progressive_passes":72.0,"progressive_carries":76.0,"passes_into_final_third":83.0,"key_passes":62.0,"xa":53.0,"touch_security_pressured":43.0,"touch_into_stride":48.0,"ball_recoveries":79.0,"tackles_and_interceptions":70.0}},"Ball-winning DM":{"references":["Sofyan Amrabat","Aur\u00e9lien Tchouam\u00e9ni"],"description":"Screens the defence, wins the ball, keeps it simple","vector":{"progressive_passes":71.0,"progressive_carries":61.0,"passes_into_final_third":62.0,"key_passes":33.0,"xa":43.0,"touch_security_pressured":null,"touch_into_stride":53.0,"ball_recoveries":81.0,"tackles_and_interceptions":78.0}},"Deep-lying playmaker":{"references":["Sergio Busquets"],"description":"Dictates from deep; security and distribution over penetration","vector":{"progressive_passes":92.0,"progressive_carries":30.0,"passes_into_final_third":89.0,"key_passes":47.0,"xa":37.0,"touch_security_pressured":null,"touch_into_stride":8.0,"ball_recoveries":26.0,"tackles_and_interceptions":84.0}},"Creative AM":{"references":["Antoine Griezmann","Gavi"],"description":"Final-third creation, key passes and link play between lines","vector":{"progressive_passes":36.0,"progressive_carries":62.0,"passes_into_final_third":43.0,"key_passes":67.0,"xa":78.0,"touch_security_pressured":33.0,"touch_into_stride":44.0,"ball_recoveries":50.0,"tackles_and_interceptions":59.0}},"Attacking fullback":{"references":["Achraf Hakimi"],"description":"Overlaps, crosses, and carries from wide; end-product from fullback","vector":{"progressive_passes":55.0,"progressive_carries":48.0,"passes_into_final_third":27.0,"key_passes":58.0,"xa":43.0,"touch_security_pressured":null,"touch_into_stride":62.0,"ball_recoveries":75.0,"tackles_and_interceptions":93.0}}}};
+const $=id=>document.getElementById(id);
+
+const STYLE=[
+  ["progressive_carries","Ball-carrying","drives forward with the ball"],
+  ["progressive_passes","Forward passing","plays it forward, breaks lines"],
+  ["passes_into_final_third","Final-third entries","gets the ball into dangerous areas"],
+  ["key_passes","Chance creation","passes that create shots"],
+  ["xa","Assist threat","quality of chances created"],
+  ["touch_into_stride","First touch","touch that sets up the next action"],
+  ["touch_security_pressured","Security under pressure","keeps it when pressed"],
+  ["tackles_and_interceptions","Ball-winning","tackles and interceptions"],
+  ["ball_recoveries","Loose-ball reading","gets to second balls"]
+];
+const FILM=[
+  ["speed","Top speed","raw pace"],
+  ["smoothness","Smoothness","balance and ease on the ball"],
+  ["composure","Composure","decisions under pressure"]
+];
+const LEVELS=[["Poor",20],["Below",40],["Average",60],["Good",80],["Elite",95]];
+const S={style:{},film:{},meta:{player:"",team:"",comp:""}};
+
+function renderAxes(list, container, cls, store){
+  container.innerHTML="";
+  list.forEach(function(item){
+    const key=item[0], nm=item[1], hint=item[2];
+    const wrap=document.createElement("div"); wrap.className="axis";
+    wrap.innerHTML='<div class="top"><span class="nm">'+nm+'<span class="hint">'+hint+'</span></span><span class="val" id="v_'+key+'">&mdash;</span></div>';
+    const seg=document.createElement("div"); seg.className="seg "+cls;
+    LEVELS.forEach(function(lv){
+      const lab=lv[0], val=lv[1];
+      const b=document.createElement("button"); b.textContent=lab;
+      b.onclick=function(){store[key]=val;
+        Array.prototype.forEach.call(seg.children,function(c){c.classList.remove("on");});
+        b.classList.add("on"); $("v_"+key).textContent=val; if(cls!=="film")recompute();};
+      seg.appendChild(b);
+    });
+    wrap.appendChild(seg); container.appendChild(wrap);
+  });
+}
+renderAxes(STYLE,$("styleAxes"),"",S.style);
+renderAxes(FILM,$("filmAxes"),"film",S.film);
+
+function median(a){const s=a.slice().sort(function(x,y){return x-y;});const m=s.length>>1;return s.length%2?s[m]:(s[m-1]+s[m])/2;}
+function match(profile){
+  const axes=LIB.axes, out=[];
+  for(const name in LIB.archetypes){
+    const a=LIB.archetypes[name];
+    const common=axes.filter(function(k){return profile[k]!=null && a.vector[k]!=null;});
+    if(common.length<3) continue;
+    const p=common.map(function(k){return +profile[k];});
+    const q=common.map(function(k){return +a.vector[k];});
+    const pm=p.reduce(function(x,y){return x+y;},0)/p.length;
+    const qm=q.reduce(function(x,y){return x+y;},0)/q.length;
+    const pe=p.map(function(x){return x-pm;});
+    const qe=q.map(function(x){return x-qm;});
+    const dot=pe.reduce(function(s,x,i){return s+x*qe[i];},0);
+    const np_=Math.hypot.apply(null,pe), nq=Math.hypot.apply(null,qe);
+    const corr=(np_*nq>1e-9)?dot/(np_*nq):0;
+    const pmd=median(p), qmd=median(q);
+    const agree=p.reduce(function(s,x,i){return s+((x>=pmd)===(q[i]>=qmd)?1:0);},0)/p.length;
+    const score=(0.65*((corr+1)/2)+0.35*agree)*100;
+    out.push({archetype:name, references:a.references||[], description:a.description, similarity:Math.round(score*10)/10, axes_used:common.length});
+  }
+  out.sort(function(x,y){return y.similarity-x.similarity;});
+  return out;
+}
+function recompute(){
+  const graded=Object.keys(S.style).length;
+  if(graded<3){$("compName").textContent="Grade 3+ style axes";$("compPct").textContent="";$("compRunner").textContent="";$("compDesc").textContent="";return;}
+  const res=match(S.style); if(!res.length) return;
+  const t=res[0];
+  $("compName").textContent=t.archetype;
+  $("compPct").textContent=t.similarity+"% style match \u00b7 like "+(t.references[0]||"");
+  $("compRunner").textContent=res[1]?("then "+res[1].archetype+" ("+res[1].similarity+"%)"):"";
+  $("compDesc").textContent=t.description;
+}
+
+const Media={kind:null,yt:null};
+function ytId(u){u=(u||"").trim();if(/^[\w-]{11}$/.test(u))return u;var m;
+  m=u.match(/[?&]v=([\w-]{11})/);if(m)return m[1];
+  m=u.match(/youtu\.be\/([\w-]{11})/);if(m)return m[1];
+  m=u.match(/\/(embed|shorts|live)\/([\w-]{11})/);if(m)return m[2];return null;}
+function loadURL(){var raw=$("url").value.trim();var id=ytId(raw);
+  if(id){loadYT(id);} else if(/^https?:\/\//.test(raw)){loadFile(raw);}
+  else{alert("Paste a YouTube link or a direct video URL.");return;}
+  $("start").style.display="none";}
+function loadYT(id){Media.kind="yt";$("vid").style.display="none";$("ytwrap").style.display="block";
+  var make=function(){Media.yt=new YT.Player("ytplayer",{videoId:id,playerVars:{playsinline:1,rel:0,modestbranding:1}});};
+  if(window.YT&&window.YT.Player)make();
+  else{window.onYouTubeIframeAPIReady=make;if(!document.getElementById("ytapi")){var s=document.createElement("script");s.id="ytapi";s.src="https://www.youtube.com/iframe_api";document.head.appendChild(s);}}}
+function loadFile(src){Media.kind="native";$("ytwrap").style.display="none";var v=$("vid");v.style.display="block";v.src=src;v.controls=true;}
+$("btnLoad").onclick=loadURL;
+$("url").addEventListener("keydown",function(e){if(e.key==="Enter")loadURL();});
+$("inVid").addEventListener("change",function(e){var f=e.target.files[0];if(f){loadFile(URL.createObjectURL(f));$("start").style.display="none";}});
+
+function openSheet(html){$("sheetContent").innerHTML=html;$("sheet").classList.add("on");$("scrim").classList.add("on");}
+function closeSheet(){$("sheet").classList.remove("on");$("scrim").classList.remove("on");}
+$("scrim").onclick=closeSheet;
+$("btnMenu").onclick=function(){openSheet(
+  '<div class="field"><label>Player</label><input id="mPlayer" placeholder="Name" value="'+S.meta.player+'"></div>'+
+  '<div class="row2"><div class="field"><label>Team</label><input id="mTeam" placeholder="e.g. Serie D side" value="'+S.meta.team+'"></div>'+
+  '<div class="field"><label>Match</label><input id="mComp" placeholder="opponent / date" value="'+S.meta.comp+'"></div></div>'+
+  '<button style="width:100%;border-radius:12px;padding:14px;font-size:15px;font-weight:600;background:var(--clean);color:#0b1a0e" onclick="saveMeta()">Done</button>');};
+window.saveMeta=function(){S.meta.player=$("mPlayer").value;S.meta.team=$("mTeam").value;S.meta.comp=$("mComp").value;
+  $("who").innerHTML=S.meta.player?"<b>"+esc(S.meta.player)+"</b>"+esc([S.meta.team,S.meta.comp].filter(Boolean).join(" \u00b7 ")):"Grade a player from film";closeSheet();};
+function esc(s){return String(s).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];});}
+
+function reportHTML(){
+  var res=match(S.style); var t=res[0];
+  var styleRows=STYLE.filter(function(x){return S.style[x[0]]!=null;}).map(function(x){return '<div class="rrow"><span>'+x[1]+'</span><b>'+S.style[x[0]]+'</b></div>';}).join("");
+  var filmRows=FILM.filter(function(x){return S.film[x[0]]!=null;}).map(function(x){return '<div class="rrow"><span>'+x[1]+'</span><b>'+S.film[x[0]]+'</b></div>';}).join("");
+  return '<h3>'+esc(S.meta.player||"Unnamed player")+'</h3>'+
+    '<div class="note">'+esc([S.meta.team,S.meta.comp].filter(Boolean).join(" \u00b7 "))+'</div>'+
+    (t?'<div class="rc"><div class="note">PLAYS MOST LIKE</div><div style="font-family:var(--disp);font-size:22px;text-transform:uppercase;color:var(--accent)">'+t.archetype+'</div><div class="note">'+t.similarity+'% style match \u00b7 like '+esc(t.references[0]||"")+(res[1]?' \u00b7 then '+res[1].archetype+' ('+res[1].similarity+'%)':'')+'</div><div style="margin-top:6px;font-size:12.5px">'+t.description+'</div></div>':'')+
+    '<div class="rc"><div class="note">STYLE FINGERPRINT</div>'+styleRows+'</div>'+
+    (filmRows?'<div class="rc"><div class="note">FILM READ (the differentiator)</div>'+filmRows+'</div>':'')+
+    '<div class="note" style="margin-top:8px">Style graded from film and matched to a professional archetype library (free StatsBomb reference). Film read is scout judgment of traits stats cannot capture. A screen to pair with deeper film review, not a signing decision.</div>'+
+    '<button style="width:100%;border-radius:12px;padding:13px;font-size:15px;font-weight:600;background:var(--raised);border:1px solid var(--line);color:var(--chalk);margin-top:12px" onclick="exportJSON()">Export for Scout Report</button>';
+}
+$("btnReport").onclick=function(){
+  if(Object.keys(S.style).length<3){alert("Grade at least 3 style axes first.");return;}
+  openSheet('<div id="reportView">'+reportHTML()+'</div>');
+};
+window.exportJSON=function(){
+  var res=match(S.style);
+  var session={meta:{player:S.meta.player,team:S.meta.team,match:S.meta.comp,tool:"Scout a Player v1",exported:new Date().toISOString()},
+    profile:Object.fromEntries(STYLE.filter(function(x){return S.style[x[0]]!=null;}).map(function(x){return [x[0],{value:S.style[x[0]],pct:S.style[x[0]],label:x[1]}];})),
+    film:S.film, comp:res.slice(0,3)};
+  // if served from the Scout server, save to the shared library too
+  if(location.port){ try{ fetch("/api/players",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(session)}); }catch(e){} }
+  var blob=new Blob([JSON.stringify(session,null,2)],{type:"application/json"});
+  var a=document.createElement("a");a.href=URL.createObjectURL(blob);
+  a.download=((S.meta.player||"player").replace(/\s+/g,"_"))+"_scouted.json";
+  document.body.appendChild(a);a.click();a.remove();
+};
+$("btnSave").onclick=window.exportJSON;
+
+if("serviceWorker" in navigator && location.protocol.indexOf("http")===0) navigator.serviceWorker.register("sw.js").catch(function(){});
+</script>
+</body>
+</html>

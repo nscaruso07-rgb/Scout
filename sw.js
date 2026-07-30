@@ -1,5 +1,5 @@
-const CACHE = 'scout-v1';
-const SHELL = ['./','index.html','grade.html','queue.html','report.html','filmlab.html','manifest.webmanifest'];
+const CACHE = 'scout-v2';
+const SHELL = ['./','index.html','grade.html','queue.html','report.html','filmlab.html','scout-player.html','manifest.webmanifest'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
 });
