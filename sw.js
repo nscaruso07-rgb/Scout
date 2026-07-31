@@ -1,5 +1,5 @@
-const CACHE = 'scout-v4';
-const SHELL = ['./','index.html','grade.html','queue.html','report.html','filmlab.html','scout-player.html','manifest.webmanifest'];
+const CACHE = 'scout-v5';
+const SHELL = ['./','index.html','home.html','grade.html','queue.html','report.html','filmlab.html','scout-player.html','manifest.webmanifest'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
 });
@@ -16,6 +16,6 @@ self.addEventListener('fetch', e => {
       const copy = res.clone();
       caches.open(CACHE).then(c => c.put(e.request, copy));
       return res;
-    }).catch(() => caches.match('index.html')))
+    }).catch(() => caches.match('index.html','home.html')))
   );
 });
